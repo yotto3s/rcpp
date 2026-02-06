@@ -15,8 +15,8 @@ set(RUNTIME_OVERHEAD_EXAMPLES
     01_runtime_check_positive
     02_runtime_check_nonzero
     03_runtime_check_inrange
-    04_optional_addition
-    05_optional_subtraction
+    04_checked_addition
+    05_checked_subtraction
 )
 
 set(ZERO_OVERHEAD_TARGETS "")

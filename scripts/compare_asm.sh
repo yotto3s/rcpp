@@ -88,6 +88,10 @@ for example in "${EXAMPLES[@]}"; do
         refined_asm=$(extract_func_body "$DUMPFILE" "$refined_func" 2>/dev/null) || refined_asm=""
         plain_asm=$(extract_func_body "$DUMPFILE" "$plain_func" 2>/dev/null) || plain_asm=""
 
+        # Normalize commutative lea operand order (register allocation artifact)
+        refined_asm=$(echo "$refined_asm" | perl -pe 's/lea\s+\((%\w+),(%\w+)(?:,1)?\)/my @r = sort ($1,$2); "lea ($r[0],$r[1],1)"/e')
+        plain_asm=$(echo "$plain_asm" | perl -pe 's/lea\s+\((%\w+),(%\w+)(?:,1)?\)/my @r = sort ($1,$2); "lea ($r[0],$r[1],1)"/e')
+
         if [[ -z "$refined_asm" ]]; then
             echo -e "${RED}MISS${RESET} ${example}: ${refined_func} not found in disassembly"
             DIFF=$((DIFF + 1))

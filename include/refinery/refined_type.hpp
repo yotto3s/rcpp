@@ -22,6 +22,45 @@ concept predicate_for = requires(Pred pred, T value) {
     { pred(value) } -> std::convertible_to<bool>;
 };
 
+// Detect interval predicates without depending on interval.hpp
+namespace detail {
+
+template <auto Pred>
+concept has_interval_bounds = requires {
+    { decltype(Pred)::lo };
+    { decltype(Pred)::hi };
+};
+
+} // namespace detail
+
+// Implication traits for predicate conversions (base template)
+namespace traits {
+
+template <auto SourcePred, auto TargetPred> struct implies {
+    static constexpr bool value = false;
+};
+
+} // namespace traits
+
+// Unified predicate implication check
+namespace detail {
+
+template <typename T, auto Source, auto Target>
+consteval bool predicate_implies() {
+    if constexpr (has_interval_bounds<Source> && has_interval_bounds<Target>) {
+        // Interval -> Interval: source must be a subset of target
+        return Source.lo >= Target.lo && Source.hi <= Target.hi;
+    } else if constexpr (has_interval_bounds<Source>) {
+        // Interval -> Predicate: test both endpoints
+        return Target(Source.lo) && Target(Source.hi);
+    } else {
+        // Predicate -> Predicate: explicit trait
+        return traits::implies<Source, Target>::value;
+    }
+}
+
+} // namespace detail
+
 // Core refinement type wrapper
 template <typename T, auto Predicate>
     requires predicate_for<decltype(Predicate), T>
@@ -81,6 +120,17 @@ class Refined {
     // Copy and move assignment
     constexpr Refined& operator=(const Refined&) = default;
     constexpr Refined& operator=(Refined&&) = default;
+
+    // Implicit converting constructor from compatible refinements.
+    // Only participates in overload resolution when OtherPred provably
+    // implies Predicate (checked at compile time).
+    template <auto OtherPred>
+        requires (!std::same_as<decltype(OtherPred), decltype(Predicate)> ||
+                  OtherPred != Predicate) &&
+                 predicate_for<decltype(OtherPred), T> &&
+                 (detail::predicate_implies<T, OtherPred, Predicate>())
+    constexpr Refined(const Refined<T, OtherPred>& other) noexcept
+        : value_(other.get()) {}
 
     // Access the underlying value
     [[nodiscard]] constexpr const T& get() const noexcept { return value_; }

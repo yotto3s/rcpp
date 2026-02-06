@@ -244,16 +244,14 @@ TEST(Operations, SafeArithmetic) {
     constexpr auto min_ab = refined_min(a, b);
     static_assert(min_ab.get() == 3);
 
-    // Integer arithmetic returns optional (overflow possible)
+    // Integer arithmetic now returns Refined directly (interval-based)
     auto int_sum = a + b;
-    static_assert(std::same_as<decltype(int_sum), std::optional<PositiveInt>>);
-    ASSERT_TRUE(int_sum.has_value());
-    EXPECT_EQ(int_sum->get(), 8);
+    static_assert(interval_predicate<decltype(int_sum)::predicate>);
+    EXPECT_EQ(int_sum.get(), 8);
 
     auto int_prod = a * b;
-    static_assert(std::same_as<decltype(int_prod), std::optional<PositiveInt>>);
-    ASSERT_TRUE(int_prod.has_value());
-    EXPECT_EQ(int_prod->get(), 15);
+    static_assert(interval_predicate<decltype(int_prod)::predicate>);
+    EXPECT_EQ(int_prod.get(), 15);
 
     // Float arithmetic returns Refined directly (no overflow to negative)
     PositiveDouble fa{5.0, runtime_check};
@@ -752,4 +750,216 @@ TEST(Concept, IsRefined) {
     // Works with curried predicates (capturing lambdas)
     static_assert(is_refined<Refined<int, InRange(0, 100)>>);
     static_assert(is_refined<UnitDouble>);
+}
+
+// ---- Checked Arithmetic Tests ----
+
+TEST(CheckedArith, AddNoOverflow) {
+    using refinery::detail::checked_add;
+    EXPECT_EQ(checked_add(3, 5), 8);
+    EXPECT_EQ(checked_add(-3, -5), -8);
+    EXPECT_EQ(checked_add(0, 0), 0);
+}
+
+TEST(CheckedArith, AddOverflow) {
+    using refinery::detail::checked_add;
+    EXPECT_THROW(checked_add(std::numeric_limits<int>::max(), 1), refinement_error);
+    EXPECT_THROW(checked_add(std::numeric_limits<int>::min(), -1), refinement_error);
+}
+
+TEST(CheckedArith, SubNoOverflow) {
+    using refinery::detail::checked_sub;
+    EXPECT_EQ(checked_sub(10, 3), 7);
+    EXPECT_EQ(checked_sub(-3, 5), -8);
+}
+
+TEST(CheckedArith, SubOverflow) {
+    using refinery::detail::checked_sub;
+    EXPECT_THROW(checked_sub(std::numeric_limits<int>::min(), 1), refinement_error);
+    EXPECT_THROW(checked_sub(std::numeric_limits<int>::max(), -1), refinement_error);
+}
+
+TEST(CheckedArith, MulNoOverflow) {
+    using refinery::detail::checked_mul;
+    EXPECT_EQ(checked_mul(3, 5), 15);
+    EXPECT_EQ(checked_mul(-3, 5), -15);
+    EXPECT_EQ(checked_mul(0, std::numeric_limits<int>::max()), 0);
+}
+
+TEST(CheckedArith, MulOverflow) {
+    using refinery::detail::checked_mul;
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::max(), 2), refinement_error);
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), 2), refinement_error);
+}
+
+TEST(Interval, IntegerOverflowThrows) {
+    // Addition that overflows
+    IntervalRefined<int, 1, std::numeric_limits<int>::max()> big{
+        std::numeric_limits<int>::max(), runtime_check};
+    IntervalRefined<int, 1, 100> small{1, runtime_check};
+    EXPECT_THROW((void)(big + small), refinement_error);
+
+    // Multiplication that overflows
+    IntervalRefined<int, 1, std::numeric_limits<int>::max()> big2{
+        std::numeric_limits<int>::max(), runtime_check};
+    IntervalRefined<int, 2, 3> two{2, runtime_check};
+    EXPECT_THROW((void)(big2 * two), refinement_error);
+
+    // Subtraction that overflows
+    IntervalRefined<int, std::numeric_limits<int>::min(), -1> neg{
+        std::numeric_limits<int>::min(), runtime_check};
+    IntervalRefined<int, 1, 100> pos{1, runtime_check};
+    EXPECT_THROW((void)(neg - pos), refinement_error);
+
+    // Negation that overflows (negate INT_MIN)
+    IntervalRefined<int, std::numeric_limits<int>::min(), -1> neg2{
+        std::numeric_limits<int>::min(), runtime_check};
+    EXPECT_THROW((void)(-neg2), refinement_error);
+}
+
+TEST(Interval, FloatNoThrow) {
+    // Float operations should not throw even for extreme values
+    IntervalRefined<double, 1.0, 1e308> big{1e308, runtime_check};
+    IntervalRefined<double, 1.0, 1e308> big2{1e308, runtime_check};
+    // This produces infinity but shouldn't throw
+    auto result = big + big2;
+    EXPECT_TRUE(std::isinf(result.get()));
+}
+
+// ---- Interval Alias Tests ----
+
+TEST(IntervalAliases, PositiveIntIsInterval) {
+    static_assert(interval_predicate<PositiveInt::predicate>);
+    static_assert(decltype(PositiveInt::predicate)::lo == 1);
+    static_assert(decltype(PositiveInt::predicate)::hi == std::numeric_limits<int>::max());
+
+    constexpr PositiveInt p{42};
+    static_assert(p.get() == 42);
+
+    PositiveInt pr{42, runtime_check};
+    EXPECT_EQ(pr.get(), 42);
+    EXPECT_THROW(PositiveInt(0, runtime_check), refinement_error);
+    EXPECT_THROW(PositiveInt(-1, runtime_check), refinement_error);
+}
+
+TEST(IntervalAliases, NonNegativeIntIsInterval) {
+    static_assert(interval_predicate<NonNegativeInt::predicate>);
+    static_assert(decltype(NonNegativeInt::predicate)::lo == 0);
+    static_assert(decltype(NonNegativeInt::predicate)::hi == std::numeric_limits<int>::max());
+
+    constexpr NonNegativeInt z{0};
+    static_assert(z.get() == 0);
+    EXPECT_THROW(NonNegativeInt(-1, runtime_check), refinement_error);
+}
+
+TEST(IntervalAliases, ArithmeticReturnsRefined) {
+    PositiveInt a{5, runtime_check};
+    PositiveInt b{3, runtime_check};
+
+    auto sum = a + b;
+    EXPECT_EQ(sum.get(), 8);
+    static_assert(interval_predicate<decltype(sum)::predicate>);
+
+    auto prod = a * b;
+    EXPECT_EQ(prod.get(), 15);
+    static_assert(interval_predicate<decltype(prod)::predicate>);
+}
+
+TEST(IntervalAliases, NegationTransforms) {
+    PositiveInt a{5, runtime_check};
+    auto neg = -a;
+    EXPECT_EQ(neg.get(), -5);
+    static_assert(interval_predicate<decltype(neg)::predicate>);
+    static_assert(decltype(neg)::predicate.hi == -1);
+}
+
+TEST(IntervalAliases, SubtractionReturnsRefined) {
+    PositiveInt a{10, runtime_check};
+    PositiveInt b{3, runtime_check};
+
+    auto diff = a - b;
+    EXPECT_EQ(diff.get(), 7);
+    static_assert(interval_predicate<decltype(diff)::predicate>);
+}
+
+// ---- Predicate Implication Tests ----
+
+TEST(Implication, IntervalToInterval) {
+    // [1, 100] should convert to [0, 200]
+    auto x = IntervalRefined<int, 1, 100>(42, runtime_check);
+    IntervalRefined<int, 0, 200> wider = x;
+    EXPECT_EQ(wider.get(), 42);
+
+    // [1, 100] should convert to PositiveInt (Interval<1, INT_MAX>)
+    PositiveInt p = x;
+    EXPECT_EQ(p.get(), 42);
+
+    // [1, 100] should convert to NonNegativeInt (Interval<0, INT_MAX>)
+    NonNegativeInt nn = x;
+    EXPECT_EQ(nn.get(), 42);
+}
+
+TEST(Implication, IntervalToPredicate) {
+    auto x = IntervalRefined<int, 1, 100>(42, runtime_check);
+
+    // [1, 100] implies NonZero (NonZero(1) && NonZero(100))
+    Refined<int, NonZero> nz = x;
+    EXPECT_EQ(nz.get(), 42);
+}
+
+TEST(Implication, PredicateToPredicate) {
+    // Positive implies NonZero (explicit trait)
+    Refined<double, Positive> pd{3.14, runtime_check};
+    Refined<double, NonZero> nz = pd;
+    EXPECT_EQ(nz.get(), 3.14);
+
+    // Positive implies NonNegative (explicit trait)
+    Refined<double, NonNegative> nn = pd;
+    EXPECT_EQ(nn.get(), 3.14);
+
+    // Negative implies NonZero
+    Refined<double, Negative> nd{-2.5, runtime_check};
+    Refined<double, NonZero> nz2 = nd;
+    EXPECT_EQ(nz2.get(), -2.5);
+
+    // Negative implies NonPositive
+    Refined<double, NonPositive> np = nd;
+    EXPECT_EQ(np.get(), -2.5);
+}
+
+TEST(Implication, CompileTimeConversion) {
+    constexpr auto x = IntervalRefined<int, 1, 100>(42);
+    constexpr PositiveInt p = x;
+    static_assert(p.get() == 42);
+}
+
+TEST(Implication, InvalidConversionDoesNotCompile) {
+    // [0, 100] does NOT imply Interval<1, INT_MAX> (0 < 1)
+    static_assert(!detail::predicate_implies<int, Interval<0, 100>{}, Interval<1, std::numeric_limits<int>::max()>{}>());
+}
+
+// ---- Float operator return type tests ----
+
+TEST(Operations, FloatArithmeticUnchanged) {
+    PositiveDouble a{5.0, runtime_check};
+    PositiveDouble b{3.0, runtime_check};
+
+    auto sum = a + b;
+    static_assert(std::same_as<decltype(sum), PositiveDouble>);
+    EXPECT_DOUBLE_EQ(sum.get(), 8.0);
+
+    auto prod = a * b;
+    static_assert(std::same_as<decltype(prod), PositiveDouble>);
+    EXPECT_DOUBLE_EQ(prod.get(), 15.0);
+
+    // Subtraction of floats with Positive predicate — result might not be positive
+    // This now returns plain double (not optional)
+    auto diff = a - b;
+    static_assert(std::same_as<decltype(diff), double>);
+    EXPECT_DOUBLE_EQ(diff, 2.0);
+
+    // Negation of positive float — returns plain double
+    auto neg = -a;
+    static_assert(std::same_as<decltype(neg), double>);
+    EXPECT_DOUBLE_EQ(neg, -5.0);
 }

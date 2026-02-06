@@ -53,65 +53,57 @@ struct preserves<NonNegative, std::multiplies<>, T> {
     static constexpr bool value = true;
 };
 
-} // namespace traits
-
-namespace detail {
-
-// Detect interval predicates without depending on interval.hpp
-template <auto Pred>
-concept has_interval_bounds = requires {
-    { decltype(Pred)::lo };
-    { decltype(Pred)::hi };
+// Predicate implication specializations (depends on predicates.hpp)
+template <> struct implies<Positive, NonZero> {
+    static constexpr bool value = true;
+};
+template <> struct implies<Positive, NonNegative> {
+    static constexpr bool value = true;
+};
+template <> struct implies<Negative, NonZero> {
+    static constexpr bool value = true;
+};
+template <> struct implies<Negative, NonPositive> {
+    static constexpr bool value = true;
 };
 
-} // namespace detail
+} // namespace traits
 
-// Binary operation that attempts to preserve refinement
-template <auto Pred, typename T, typename Op>
-[[nodiscard]] constexpr auto refined_binop(const Refined<T, Pred>& lhs,
-                                           const Refined<T, Pred>& rhs, Op op)
-    -> std::conditional_t<traits::preserves<Pred, Op, T>::value,
-                          Refined<T, Pred>, std::optional<Refined<T, Pred>>> {
-    auto result = op(lhs.get(), rhs.get());
+// has_interval_bounds and predicate_implies are defined in refined_type.hpp
 
-    if constexpr (traits::preserves<Pred, Op, T>::value) {
-        // Predicate is guaranteed to be preserved (floating-point only)
-        return Refined<T, Pred>(result, assume_valid);
-    } else {
-        // Must check at runtime
-        return try_refine<Pred>(result);
-    }
-}
-
-// Arithmetic operators for refined types that return optional results
-// (because we can't prove predicate preservation in general)
+// Arithmetic operators for non-interval refined types.
+// Returns Refined when predicate is provably preserved, plain T otherwise.
 
 // Addition
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr auto operator+(const Refined<T, Pred>& lhs,
-                                       const Refined<T, Pred>& rhs)
-    -> std::conditional_t<traits::preserves<Pred, std::plus<>, T>::value,
-                          Refined<T, Pred>, std::optional<Refined<T, Pred>>> {
-    return refined_binop(lhs, rhs, std::plus<>{});
+                                       const Refined<T, Pred>& rhs) {
+    if constexpr (traits::preserves<Pred, std::plus<>, T>::value) {
+        return Refined<T, Pred>(lhs.get() + rhs.get(), assume_valid);
+    } else {
+        return lhs.get() + rhs.get();
+    }
 }
 
-// Subtraction (rarely preserves predicates)
+// Subtraction (rarely preserves predicates, returns plain T)
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
-[[nodiscard]] constexpr std::optional<Refined<T, Pred>>
+[[nodiscard]] constexpr T
 operator-(const Refined<T, Pred>& lhs, const Refined<T, Pred>& rhs) {
-    return try_refine<Pred>(lhs.get() - rhs.get());
+    return lhs.get() - rhs.get();
 }
 
 // Multiplication
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr auto operator*(const Refined<T, Pred>& lhs,
-                                       const Refined<T, Pred>& rhs)
-    -> std::conditional_t<traits::preserves<Pred, std::multiplies<>, T>::value,
-                          Refined<T, Pred>, std::optional<Refined<T, Pred>>> {
-    return refined_binop(lhs, rhs, std::multiplies<>{});
+                                       const Refined<T, Pred>& rhs) {
+    if constexpr (traits::preserves<Pred, std::multiplies<>, T>::value) {
+        return Refined<T, Pred>(lhs.get() * rhs.get(), assume_valid);
+    } else {
+        return lhs.get() * rhs.get();
+    }
 }
 
 // Division (use with NonZero denominator)
@@ -132,12 +124,12 @@ template <typename T, auto NumPred, auto DivPred>
     return numerator.get() % divisor.get();
 }
 
-// Unary negation
+// Unary negation (returns plain T for non-interval predicates)
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
-[[nodiscard]] constexpr std::optional<Refined<T, Pred>>
+[[nodiscard]] constexpr T
 operator-(const Refined<T, Pred>& val) {
-    return try_refine<Pred>(-val.get());
+    return -val.get();
 }
 
 // Unary plus (identity)
