@@ -56,7 +56,7 @@ refine.hpp  (main entry point, type aliases, convenience macros)
 
 ### Key Type Aliases (defined in `refine.hpp`)
 
-`PositiveInt`, `NonZeroInt`, `NonNegativeInt`, `PositiveDouble`, `NonZeroDouble`, `FiniteFloat`, `FiniteDouble`, `NormalizedFloat`, `NormalizedDouble`, `UnitFloat`, `UnitDouble`, `Percentage`, `Probability`, `ByteValue`, `PortNumber`, `Natural`, `Whole`, etc. Created via `DEFINE_REFINED_TYPE` and `DEFINE_PREDICATE` macros.
+`PositiveInt`, `NonZeroInt`, `NonNegativeInt`, `PositiveDouble`, `NonZeroDouble`, `FiniteFloat`, `FiniteDouble`, `NormalizedFloat`, `NormalizedDouble`, `UnitFloat`, `UnitDouble`, `Percentage`, `Probability`, `ByteValue`, `PortNumber`, `Natural`, `Whole`, etc. Created via explicit `using` declarations and the `DEFINE_PREDICATE` macro.
 
 ### Zero-Overhead Examples (`examples/zero_overhead/`)
 

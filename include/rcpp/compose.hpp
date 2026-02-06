@@ -13,22 +13,6 @@
 
 namespace refine {
 
-namespace detail {
-
-// Helper to check if all predicates are satisfied
-template<typename T, typename... Preds>
-constexpr bool all_satisfied(const T& value, Preds... preds) {
-    return (preds(value) && ...);
-}
-
-// Helper to check if any predicate is satisfied
-template<typename T, typename... Preds>
-constexpr bool any_satisfied(const T& value, Preds... preds) {
-    return (preds(value) || ...);
-}
-
-} // namespace detail
-
 // Conjunction of predicates: All<P1, P2, ...>
 // Value must satisfy ALL predicates
 template<auto... Preds>
@@ -156,35 +140,6 @@ template<auto MemPtr, auto Pred>
 inline constexpr auto OnMember = [](const auto& v) constexpr {
     return Pred(v.*MemPtr);
 };
-
-// Shorthand for creating composed predicates
-namespace compose {
-
-// Combine predicates with AND
-template<auto P1, auto P2>
-inline constexpr auto operator&&(
-    std::integral_constant<decltype(P1), P1>,
-    std::integral_constant<decltype(P2), P2>
-) {
-    return std::integral_constant<decltype(All<P1, P2>), All<P1, P2>>{};
-}
-
-// Combine predicates with OR
-template<auto P1, auto P2>
-inline constexpr auto operator||(
-    std::integral_constant<decltype(P1), P1>,
-    std::integral_constant<decltype(P2), P2>
-) {
-    return std::integral_constant<decltype(Any<P1, P2>), Any<P1, P2>>{};
-}
-
-// Negate a predicate
-template<auto P>
-inline constexpr auto operator!(std::integral_constant<decltype(P), P>) {
-    return std::integral_constant<decltype(Not<P>), Not<P>>{};
-}
-
-} // namespace compose
 
 } // namespace refine
 

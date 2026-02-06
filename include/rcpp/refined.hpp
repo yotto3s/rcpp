@@ -22,13 +22,6 @@ concept predicate_for = requires(Pred pred, T value) {
     { pred(value) } -> std::convertible_to<bool>;
 };
 
-// Concept for predicates that can be evaluated at compile time
-template<typename Pred, typename T>
-concept constexpr_predicate_for = predicate_for<Pred, T> &&
-    requires(Pred pred, T value) {
-        { std::bool_constant<(pred(T{}), true)>{} };
-    };
-
 // Core refinement type wrapper
 template<typename T, auto Predicate>
     requires predicate_for<decltype(Predicate), T>
@@ -130,6 +123,10 @@ public:
     }
 };
 
+// Zero-overhead guarantee: Refined<T, Pred> must be the same size as T
+static_assert(sizeof(Refined<int, [](int v) { return v > 0; }>) == sizeof(int));
+static_assert(sizeof(Refined<double, [](double v) { return v > 0; }>) == sizeof(double));
+
 // Factory function for compile-time construction
 template<auto Predicate, typename T>
     requires predicate_for<decltype(Predicate), T>
@@ -208,9 +205,9 @@ concept same_predicate = requires {
 
 // Concept for refined types
 template<typename T>
-concept is_refined = requires {
+concept is_refined = requires(typename T::value_type v) {
     typename T::value_type;
-    { T::predicate } -> std::convertible_to<bool(typename T::value_type)>;
+    { T::predicate(v) } -> std::convertible_to<bool>;
 };
 
 // Get reflection info for the Refined type itself

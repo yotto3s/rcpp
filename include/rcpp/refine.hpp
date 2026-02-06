@@ -91,7 +91,9 @@ using NormalizedFloat = Refined<float, Normalized>;
 using NormalizedDouble = Refined<double, Normalized>;
 
 // Unit interval [0, 1]
-inline constexpr auto IsUnit = InRange(0.0, 1.0);
+inline constexpr auto IsUnit = [](auto v) constexpr {
+    return v >= decltype(v){0} && v <= decltype(v){1};
+};
 using UnitFloat = Refined<float, IsUnit>;
 using UnitDouble = Refined<double, IsUnit>;
 
@@ -103,20 +105,11 @@ using ByteValue = Refined<int, IsByte>;
 inline constexpr auto IsPort = InRange(1, 65535);
 using PortNumber = Refined<int, IsPort>;
 
-// Array index type (non-negative size_t)
-using Index = Refined<std::size_t, NonNegative>;
-
 // Natural numbers (positive integers)
 using Natural = PositiveInt;
 
 // Whole numbers (non-negative integers)
 using Whole = NonNegativeInt;
-
-// Helper macro for defining custom refined types
-// Usage: DEFINE_REFINED_TYPE(PositiveInt, int, [](int v) { return v > 0; })
-#define DEFINE_REFINED_TYPE(Name, Type, Pred) \
-    inline constexpr auto Name##Predicate = Pred; \
-    using Name = ::refine::Refined<Type, Name##Predicate>
 
 // Helper to create a named predicate with documentation
 #define DEFINE_PREDICATE(Name, ...) \

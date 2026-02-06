@@ -1,27 +1,33 @@
-// 02_arithmetic.cpp — Proves Positive + Positive == int + int
+// 02_arithmetic.cpp — Proves Positive<double> + Positive<double> == double + double
 //
-// The preserves<Positive, plus> trait lets operator+ use assume_valid,
-// so the addition should compile to a single `add` with no branches.
+// The preserves<Positive, plus, double> trait lets operator+ use assume_valid
+// for floating-point types, so the addition compiles to a single `addsd`
+// with no branches.
+//
+// For integers, overflow can violate Positive, so operator+ returns
+// std::optional and includes a runtime check (branch).
 
 #include <rcpp/refine.hpp>
 
 using namespace refine;
 
+// --- Floating-point: zero overhead ---
+
 __attribute__((noinline))
-int refined_add(Refined<int, Positive> a, Refined<int, Positive> b) {
+double refined_add(Refined<double, Positive> a, Refined<double, Positive> b) {
     return (a + b).get();
 }
 
 __attribute__((noinline))
-int plain_add(int a, int b) {
+double plain_add(double a, double b) {
     return a + b;
 }
 
 int main() {
-    auto a = Refined<int, Positive>(10, assume_valid);
-    auto b = Refined<int, Positive>(20, assume_valid);
-    volatile int sink;
+    auto a = Refined<double, Positive>(10.0, assume_valid);
+    auto b = Refined<double, Positive>(20.0, assume_valid);
+    volatile double sink;
     sink = refined_add(a, b);
-    sink = plain_add(10, 20);
+    sink = plain_add(10.0, 20.0);
     return 0;
 }

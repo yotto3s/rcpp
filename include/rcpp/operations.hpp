@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <optional>
 #include <cmath>
+#include <limits>
 
 #include "refined.hpp"
 #include "predicates.hpp"
@@ -17,45 +18,50 @@ namespace refine {
 // Traits for determining output refinement of operations
 namespace traits {
 
-// Check if a predicate is preserved under an operation
-template<auto Pred, typename T, typename Op>
-concept preserves_predicate = requires(T a, T b) {
-    { Op{}(a, b) } -> std::same_as<T>;
-    // Note: We can't actually prove predicate preservation at compile time
-    // without SMT, so this is always false by default
-};
-
-// Marker for operations that definitely preserve a predicate
-template<auto Pred, typename Op>
+// Marker for operations that definitely preserve a predicate.
+// The T parameter restricts preservation claims to specific type categories.
+// For integers, overflow can violate the predicate, so we default to false.
+template<auto Pred, typename Op, typename T = void>
 struct preserves {
     static constexpr bool value = false;
 };
 
-// Addition of two positive numbers is positive
-template<>
-struct preserves<Positive, std::plus<>> {
+// Addition of two positive floats is positive (no overflow to negative)
+template<typename T> requires std::floating_point<T>
+struct preserves<Positive, std::plus<>, T> {
     static constexpr bool value = true;
 };
 
-// Multiplication of two positive numbers is positive
-template<>
-struct preserves<Positive, std::multiplies<>> {
+// Multiplication of two positive floats is positive
+template<typename T> requires std::floating_point<T>
+struct preserves<Positive, std::multiplies<>, T> {
     static constexpr bool value = true;
 };
 
-// Addition of two non-negative numbers is non-negative
-template<>
-struct preserves<NonNegative, std::plus<>> {
+// Addition of two non-negative floats is non-negative
+template<typename T> requires std::floating_point<T>
+struct preserves<NonNegative, std::plus<>, T> {
     static constexpr bool value = true;
 };
 
-// Multiplication of two non-negative numbers is non-negative
-template<>
-struct preserves<NonNegative, std::multiplies<>> {
+// Multiplication of two non-negative floats is non-negative
+template<typename T> requires std::floating_point<T>
+struct preserves<NonNegative, std::multiplies<>, T> {
     static constexpr bool value = true;
 };
 
 } // namespace traits
+
+namespace detail {
+
+// Detect interval predicates without depending on interval.hpp
+template<auto Pred>
+concept has_interval_bounds = requires {
+    { decltype(Pred)::lo };
+    { decltype(Pred)::hi };
+};
+
+} // namespace detail
 
 // Binary operation that attempts to preserve refinement
 template<auto Pred, typename T, typename Op>
@@ -64,14 +70,14 @@ template<auto Pred, typename T, typename Op>
     const Refined<T, Pred>& rhs,
     Op op
 ) -> std::conditional_t<
-    traits::preserves<Pred, Op>::value,
+    traits::preserves<Pred, Op, T>::value,
     Refined<T, Pred>,
     std::optional<Refined<T, Pred>>
 > {
     auto result = op(lhs.get(), rhs.get());
 
-    if constexpr (traits::preserves<Pred, Op>::value) {
-        // Predicate is guaranteed to be preserved
+    if constexpr (traits::preserves<Pred, Op, T>::value) {
+        // Predicate is guaranteed to be preserved (floating-point only)
         return Refined<T, Pred>(result, assume_valid);
     } else {
         // Must check at runtime
@@ -84,11 +90,12 @@ template<auto Pred, typename T, typename Op>
 
 // Addition
 template<typename T, auto Pred>
+    requires (!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr auto operator+(
     const Refined<T, Pred>& lhs,
     const Refined<T, Pred>& rhs
 ) -> std::conditional_t<
-    traits::preserves<Pred, std::plus<>>::value,
+    traits::preserves<Pred, std::plus<>, T>::value,
     Refined<T, Pred>,
     std::optional<Refined<T, Pred>>
 > {
@@ -97,6 +104,7 @@ template<typename T, auto Pred>
 
 // Subtraction (rarely preserves predicates)
 template<typename T, auto Pred>
+    requires (!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr std::optional<Refined<T, Pred>> operator-(
     const Refined<T, Pred>& lhs,
     const Refined<T, Pred>& rhs
@@ -106,11 +114,12 @@ template<typename T, auto Pred>
 
 // Multiplication
 template<typename T, auto Pred>
+    requires (!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr auto operator*(
     const Refined<T, Pred>& lhs,
     const Refined<T, Pred>& rhs
 ) -> std::conditional_t<
-    traits::preserves<Pred, std::multiplies<>>::value,
+    traits::preserves<Pred, std::multiplies<>, T>::value,
     Refined<T, Pred>,
     std::optional<Refined<T, Pred>>
 > {
@@ -122,8 +131,7 @@ template<typename T, auto NumPred, auto DenomPred>
 [[nodiscard]] constexpr T operator/(
     const Refined<T, NumPred>& numerator,
     const Refined<T, DenomPred>& denominator
-) requires requires { Refined<T, DenomPred>::predicate(T{1}); } // Denominator must be testable
-{
+) {
     // Denominator is refined, so division is safe
     // But we lose refinement information about the result
     return numerator.get() / denominator.get();
@@ -141,6 +149,7 @@ template<typename T, auto NumPred, auto DivPred>
 
 // Unary negation
 template<typename T, auto Pred>
+    requires (!detail::has_interval_bounds<Pred>)
 [[nodiscard]] constexpr std::optional<Refined<T, Pred>> operator-(
     const Refined<T, Pred>& val
 ) {
@@ -171,6 +180,7 @@ template<typename T, auto Pred>
 }
 
 // Safe division: requires NonZero denominator
+// NOTE: For floating-point, inf/inf produces NaN. Only guards division-by-zero.
 template<typename T>
 [[nodiscard]] constexpr T safe_divide(
     T numerator,
@@ -229,8 +239,20 @@ template<typename T, auto Pred>
 
 // Absolute value (result is NonNegative)
 template<typename T>
-    requires std::signed_integral<T> || std::floating_point<T>
+    requires std::floating_point<T>
 [[nodiscard]] constexpr Refined<T, NonNegative> abs(T value) {
+    return Refined<T, NonNegative>(
+        value < T{0} ? -value : value,
+        assume_valid
+    );
+}
+
+template<typename T>
+    requires std::signed_integral<T>
+[[nodiscard]] constexpr Refined<T, NonNegative> abs(T value) {
+    if (value == std::numeric_limits<T>::min()) {
+        throw refinement_error(value, "abs (negation of minimum value overflows)");
+    }
     return Refined<T, NonNegative>(
         value < T{0} ? -value : value,
         assume_valid
@@ -244,8 +266,26 @@ template<typename T, auto Pred>
 
 // Square (result is NonNegative for real types)
 template<typename T>
-    requires std::integral<T> || std::floating_point<T>
+    requires std::floating_point<T>
 [[nodiscard]] constexpr Refined<T, NonNegative> square(T value) {
+    return Refined<T, NonNegative>(value * value, assume_valid);
+}
+
+template<typename T>
+    requires std::integral<T>
+[[nodiscard]] constexpr Refined<T, NonNegative> square(T value) {
+    // For squaring, the result is always non-negative, so we only need to
+    // check against max. Use abs(value) but handle INT_MIN carefully.
+    if (value != 0) {
+        T abs_val = value > 0 ? value : -value;
+        // If value == min (e.g. INT_MIN), -value is UB, but min*min always overflows
+        // since |min| > |max| for two's complement. Detect via: if value < 0 and
+        // -value would overflow (value < -max), it definitely overflows when squared.
+        if (value < -std::numeric_limits<T>::max() ||
+            abs_val > std::numeric_limits<T>::max() / abs_val) {
+            throw refinement_error(value, "square (overflow)");
+        }
+    }
     return Refined<T, NonNegative>(value * value, assume_valid);
 }
 

@@ -222,14 +222,59 @@ TEST(Operations, SafeArithmetic) {
     static_assert(abs_neg.get() == 5);
     static_assert(NonNegative(abs_neg.get()));
 
-    constexpr auto sq = refine::square(-3);
-    static_assert(sq.get() == 9);
-    static_assert(NonNegative(sq.get()));
+    auto sq = refine::square(-3);
+    EXPECT_EQ(sq.get(), 9);
+    EXPECT_TRUE(NonNegative(sq.get()));
 
     constexpr PositiveInt a{5};
     constexpr PositiveInt b{3};
     constexpr auto min_ab = refined_min(a, b);
     static_assert(min_ab.get() == 3);
+
+    // Integer arithmetic returns optional (overflow possible)
+    auto int_sum = a + b;
+    static_assert(std::same_as<decltype(int_sum), std::optional<PositiveInt>>);
+    ASSERT_TRUE(int_sum.has_value());
+    EXPECT_EQ(int_sum->get(), 8);
+
+    auto int_prod = a * b;
+    static_assert(std::same_as<decltype(int_prod), std::optional<PositiveInt>>);
+    ASSERT_TRUE(int_prod.has_value());
+    EXPECT_EQ(int_prod->get(), 15);
+
+    // Float arithmetic returns Refined directly (no overflow to negative)
+    PositiveDouble fa{5.0, runtime_check};
+    PositiveDouble fb{3.0, runtime_check};
+    auto float_sum = fa + fb;
+    static_assert(std::same_as<decltype(float_sum), PositiveDouble>);
+    EXPECT_DOUBLE_EQ(float_sum.get(), 8.0);
+
+    auto float_prod = fa * fb;
+    static_assert(std::same_as<decltype(float_prod), PositiveDouble>);
+    EXPECT_DOUBLE_EQ(float_prod.get(), 15.0);
+}
+
+TEST(Operations, IntegerOverflow) {
+    // abs(INT_MIN) throws
+    EXPECT_THROW(refine::abs(std::numeric_limits<int>::min()), refinement_error);
+
+    // abs of valid negative works
+    auto abs_val = refine::abs(-42);
+    EXPECT_EQ(abs_val.get(), 42);
+
+    // square(INT_MAX) throws (overflow)
+    EXPECT_THROW(refine::square(std::numeric_limits<int>::max()), refinement_error);
+
+    // square of small values works
+    auto sq = refine::square(100);
+    EXPECT_EQ(sq.get(), 10000);
+
+    // Float abs/square still work for extreme values
+    auto abs_float = refine::abs(-1.0e300);
+    EXPECT_DOUBLE_EQ(abs_float.get(), 1.0e300);
+
+    auto sq_float = refine::square(1.0e300);
+    EXPECT_TRUE(NonNegative(sq_float.get())); // inf, but still non-negative
 }
 
 TEST(Operations, FloatMath) {
@@ -542,4 +587,129 @@ TEST(Interval, IntervalTraitsConcept) {
     static_assert(interval_predicate<Interval<-5, 5>{}>);
     static_assert(!interval_predicate<Positive>);
     static_assert(!interval_predicate<NonZero>);
+}
+
+// ---- Composition Tests (S5/S6) ----
+
+TEST(Composition, IffXor) {
+    // Iff: both must have same truth value
+    constexpr auto both_positive_or_both_not = Iff<Positive, NonZero>;
+    static_assert(both_positive_or_both_not(5));    // both true
+    static_assert(both_positive_or_both_not(0));    // both false → same
+    static_assert(!both_positive_or_both_not(-5));  // Positive=false, NonZero=true → different
+
+    // Xor: exactly one must be true
+    constexpr auto one_but_not_both = Xor<Positive, Even>;
+    static_assert(one_but_not_both(3));    // Positive=true, Even=false → true
+    static_assert(one_but_not_both(-4));   // Positive=false, Even=true → true
+    static_assert(!one_but_not_both(4));   // both true → false
+    static_assert(!one_but_not_both(-3));  // both false → false
+}
+
+TEST(Composition, ExactlyNAtLeastNAtMostN) {
+    constexpr auto exactly_two = ExactlyN<2, Positive, Even, NonZero>;
+    static_assert(exactly_two(-2));    // Even=true, NonZero=true, Positive=false → 2
+    static_assert(!exactly_two(2));    // all three true → 3
+    static_assert(!exactly_two(0));    // Even=true → 1
+
+    constexpr auto at_least_two = AtLeastN<2, Positive, Even, NonZero>;
+    static_assert(at_least_two(2));    // all three → 3 >= 2
+    static_assert(at_least_two(-2));   // Even+NonZero → 2 >= 2
+    static_assert(!at_least_two(0));   // Even only → 1 < 2
+
+    constexpr auto at_most_one = AtMostN<1, Positive, Even, NonZero>;
+    static_assert(at_most_one(0));     // Even only → 1 <= 1
+    static_assert(!at_most_one(2));    // all three → 3 > 1
+}
+
+TEST(Composition, ApplyOnMember) {
+    struct Point { int x; int y; };
+
+    constexpr auto x_positive = OnMember<&Point::x, Positive>;
+    constexpr auto y_positive = OnMember<&Point::y, Positive>;
+
+    static_assert(x_positive(Point{5, -3}));
+    static_assert(!x_positive(Point{-1, 5}));
+    static_assert(y_positive(Point{-1, 5}));
+    static_assert(!y_positive(Point{5, -3}));
+
+    // Apply with a projection function
+    constexpr auto negate = [](int v) constexpr { return -v; };
+    constexpr auto negate_is_positive = Apply<negate, Positive>;
+    static_assert(negate_is_positive(-5));   // negate(-5) = 5 > 0
+    static_assert(!negate_is_positive(5));   // negate(5) = -5 < 0
+}
+
+TEST(Composition, RuntimeComposition) {
+    // runtime::AllOf
+    runtime::AllOf<int> all_checks(Positive, NonZero);
+    EXPECT_TRUE(all_checks(5));
+    EXPECT_FALSE(all_checks(-5));
+    EXPECT_FALSE(all_checks(0));
+
+    // runtime::AnyOf
+    runtime::AnyOf<int> any_checks(Positive, Even);
+    EXPECT_TRUE(any_checks(3));    // Positive
+    EXPECT_TRUE(any_checks(-4));   // Even
+    EXPECT_FALSE(any_checks(-3));  // neither
+
+    // runtime::NoneOf
+    runtime::NoneOf<int> none_checks(Positive, Even);
+    EXPECT_TRUE(none_checks(-3));   // neither positive nor even
+    EXPECT_FALSE(none_checks(3));   // positive
+    EXPECT_FALSE(none_checks(-4));  // even
+}
+
+TEST(Operations, TransformRefined) {
+    PositiveInt p{5, runtime_check};
+    auto doubled = transform_refined<NonNegative>(p, [](int v) { return v * 2; });
+    EXPECT_EQ(doubled.get(), 10);
+    static_assert(std::same_as<decltype(doubled), Refined<int, NonNegative>>);
+}
+
+TEST(Operations, IncrementDecrement) {
+    PositiveInt p{1, runtime_check};
+
+    auto inc = increment(p);
+    ASSERT_TRUE(inc.has_value());
+    EXPECT_EQ(inc->get(), 2);
+
+    auto dec = decrement(p);
+    // Decrementing 1 gives 0, which is not Positive
+    EXPECT_FALSE(dec.has_value());
+
+    NonNegativeInt nn{0, runtime_check};
+    auto dec_nn = decrement(nn);
+    // Decrementing 0 gives -1, which is not NonNegative
+    EXPECT_FALSE(dec_nn.has_value());
+
+    auto inc_nn = increment(nn);
+    ASSERT_TRUE(inc_nn.has_value());
+    EXPECT_EQ(inc_nn->get(), 1);
+}
+
+TEST(Operations, RefinedClamp) {
+    PositiveInt lo{1, runtime_check};
+    PositiveInt hi{10, runtime_check};
+    PositiveInt val{5, runtime_check};
+
+    auto clamped = refined_clamp(val, lo, hi);
+    EXPECT_EQ(clamped.get(), 5);
+
+    PositiveInt below{1, runtime_check};
+    PositiveInt above{20, runtime_check};
+    auto clamped_above = refined_clamp(above, lo, hi);
+    EXPECT_EQ(clamped_above.get(), 10);
+}
+
+TEST(Concept, IsRefined) {
+    static_assert(is_refined<PositiveInt>);
+    static_assert(is_refined<NonZeroDouble>);
+    static_assert(is_refined<Percentage>);
+    static_assert(!is_refined<int>);
+    static_assert(!is_refined<double>);
+
+    // Works with curried predicates (capturing lambdas)
+    static_assert(is_refined<Refined<int, InRange(0, 100)>>);
+    static_assert(is_refined<UnitDouble>);
 }

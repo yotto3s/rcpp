@@ -147,7 +147,9 @@ inline constexpr auto Odd = [](auto v) constexpr {
 };
 
 // Bitwise predicates
-inline constexpr auto PowerOfTwo = [](auto v) constexpr {
+inline constexpr auto PowerOfTwo = [](auto v) constexpr
+    requires std::integral<decltype(v)>
+{
     return v > 0 && (v & (v - 1)) == 0;
 };
 

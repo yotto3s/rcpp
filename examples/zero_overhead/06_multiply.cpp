@@ -1,27 +1,33 @@
-// 06_multiply.cpp — Proves Positive * Positive == int * int
+// 06_multiply.cpp — Proves Positive<double> * Positive<double> == double * double
 //
-// The preserves<Positive, multiplies> trait lets operator* use assume_valid,
-// so the multiplication should compile to a single `imul` with no branches.
+// The preserves<Positive, multiplies, double> trait lets operator* use
+// assume_valid for floating-point types, so multiplication compiles to a
+// single `mulsd` with no branches.
+//
+// For integers, overflow can violate Positive, so operator* returns
+// std::optional and includes a runtime check (branch).
 
 #include <rcpp/refine.hpp>
 
 using namespace refine;
 
+// --- Floating-point: zero overhead ---
+
 __attribute__((noinline))
-int refined_mul(Refined<int, Positive> a, Refined<int, Positive> b) {
+double refined_mul(Refined<double, Positive> a, Refined<double, Positive> b) {
     return (a * b).get();
 }
 
 __attribute__((noinline))
-int plain_mul(int a, int b) {
+double plain_mul(double a, double b) {
     return a * b;
 }
 
 int main() {
-    auto a = Refined<int, Positive>(6, assume_valid);
-    auto b = Refined<int, Positive>(7, assume_valid);
-    volatile int sink;
+    auto a = Refined<double, Positive>(6.0, assume_valid);
+    auto b = Refined<double, Positive>(7.0, assume_valid);
+    volatile double sink;
     sink = refined_mul(a, b);
-    sink = plain_mul(6, 7);
+    sink = plain_mul(6.0, 7.0);
     return 0;
 }
