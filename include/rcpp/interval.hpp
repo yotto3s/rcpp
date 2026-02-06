@@ -4,9 +4,9 @@
 #ifndef RCPP_INTERVAL_HPP
 #define RCPP_INTERVAL_HPP
 
-#include "refined.hpp"
+#include "refined_type.hpp"
 
-namespace refine {
+namespace refined {
 
 // Structural interval predicate: closed [Lo, Hi]
 // Valid as NTTP because it has no data members (bounds are template parameters).
@@ -184,6 +184,6 @@ template<typename T, auto P>
 template<typename T, auto Lo, auto Hi>
 using IntervalRefined = Refined<T, Interval<Lo, Hi>{}>;
 
-} // namespace refine
+} // namespace refined
 
 #endif // RCPP_INTERVAL_HPP

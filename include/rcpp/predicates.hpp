@@ -12,7 +12,7 @@
 #include <string>
 #include <string_view>
 
-namespace refine {
+namespace refined {
 
 // Basic numeric predicates
 inline constexpr auto Positive = [](auto v) constexpr {
@@ -194,6 +194,6 @@ inline constexpr auto ApproxEqual = [](auto target, auto epsilon) constexpr {
 inline constexpr auto Always = [](auto) constexpr { return true; };
 inline constexpr auto Never = [](auto) constexpr { return false; };
 
-} // namespace refine
+} // namespace refined
 
 #endif // RCPP_PREDICATES_HPP

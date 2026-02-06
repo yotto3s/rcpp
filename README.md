@@ -38,8 +38,8 @@ ctest --test-dir build
 ## Usage
 
 ```cpp
-#include <rcpp/refine.hpp>
-using namespace refine;
+#include <rcpp/refined.hpp>
+using namespace refined;
 
 // Compile-time verified
 constexpr PositiveInt x{42};      // OK

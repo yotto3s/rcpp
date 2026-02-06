@@ -11,7 +11,7 @@
 #include <vector>
 #include <cstddef>
 
-namespace refine {
+namespace refined {
 
 // Conjunction of predicates: All<P1, P2, ...>
 // Value must satisfy ALL predicates
@@ -141,6 +141,6 @@ inline constexpr auto OnMember = [](const auto& v) constexpr {
     return Pred(v.*MemPtr);
 };
 
-} // namespace refine
+} // namespace refined
 
 #endif // RCPP_COMPOSE_HPP

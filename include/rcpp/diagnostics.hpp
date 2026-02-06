@@ -12,7 +12,7 @@
 
 #include <meta>
 
-namespace refine {
+namespace refined {
 
 namespace detail {
 
@@ -74,6 +74,6 @@ struct assume_valid_t {
 };
 inline constexpr assume_valid_t assume_valid{};
 
-} // namespace refine
+} // namespace refined
 
 #endif // RCPP_DIAGNOSTICS_HPP

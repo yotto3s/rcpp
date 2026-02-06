@@ -10,10 +10,10 @@
 #include <cmath>
 #include <limits>
 
-#include "refined.hpp"
+#include "refined_type.hpp"
 #include "predicates.hpp"
 
-namespace refine {
+namespace refined {
 
 // Traits for determining output refinement of operations
 namespace traits {
@@ -336,6 +336,6 @@ template<typename T>
     return T{1} / value.get();
 }
 
-} // namespace refine
+} // namespace refined
 
 #endif // RCPP_OPERATIONS_HPP

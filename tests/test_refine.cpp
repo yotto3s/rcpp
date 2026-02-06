@@ -1,12 +1,12 @@
 // test_refine.cpp - Test suite for C++26 Refinement Types Library
 
-#include <rcpp/refine.hpp>
+#include <rcpp/refined.hpp>
 #include <gtest/gtest.h>
 #include <cmath>
 #include <limits>
 #include <numbers>
 
-using namespace refine;
+using namespace refined;
 
 // ---- Helper templates used by tests ----
 
@@ -218,11 +218,11 @@ TEST(Operations, SafeArithmetic) {
     constexpr int result = safe_divide(10, denom);
     static_assert(result == 5);
 
-    constexpr auto abs_neg = refine::abs(-5);
+    constexpr auto abs_neg = refined::abs(-5);
     static_assert(abs_neg.get() == 5);
     static_assert(NonNegative(abs_neg.get()));
 
-    auto sq = refine::square(-3);
+    auto sq = refined::square(-3);
     EXPECT_EQ(sq.get(), 9);
     EXPECT_TRUE(NonNegative(sq.get()));
 
@@ -256,63 +256,63 @@ TEST(Operations, SafeArithmetic) {
 
 TEST(Operations, IntegerOverflow) {
     // abs(INT_MIN) throws
-    EXPECT_THROW(refine::abs(std::numeric_limits<int>::min()), refinement_error);
+    EXPECT_THROW(refined::abs(std::numeric_limits<int>::min()), refinement_error);
 
     // abs of valid negative works
-    auto abs_val = refine::abs(-42);
+    auto abs_val = refined::abs(-42);
     EXPECT_EQ(abs_val.get(), 42);
 
     // square(INT_MAX) throws (overflow)
-    EXPECT_THROW(refine::square(std::numeric_limits<int>::max()), refinement_error);
+    EXPECT_THROW(refined::square(std::numeric_limits<int>::max()), refinement_error);
 
     // square of small values works
-    auto sq = refine::square(100);
+    auto sq = refined::square(100);
     EXPECT_EQ(sq.get(), 10000);
 
     // Float abs/square still work for extreme values
-    auto abs_float = refine::abs(-1.0e300);
+    auto abs_float = refined::abs(-1.0e300);
     EXPECT_DOUBLE_EQ(abs_float.get(), 1.0e300);
 
-    auto sq_float = refine::square(1.0e300);
+    auto sq_float = refined::square(1.0e300);
     EXPECT_TRUE(NonNegative(sq_float.get())); // inf, but still non-negative
 }
 
 TEST(Operations, FloatMath) {
     NonNegativeDouble nn{4.0, runtime_check};
-    auto sqrt_nn = refine::safe_sqrt(nn);
+    auto sqrt_nn = refined::safe_sqrt(nn);
     EXPECT_NEAR(sqrt_nn.get(), 2.0, 1e-10);
     EXPECT_TRUE(NonNegative(sqrt_nn.get()));
 
     PositiveDouble pd{9.0, runtime_check};
-    auto sqrt_pd = refine::safe_sqrt(pd);
+    auto sqrt_pd = refined::safe_sqrt(pd);
     EXPECT_NEAR(sqrt_pd.get(), 3.0, 1e-10);
     EXPECT_TRUE(Positive(sqrt_pd.get()));
 
     NonNegativeDouble zero{0.0, runtime_check};
-    auto sqrt_zero = refine::safe_sqrt(zero);
+    auto sqrt_zero = refined::safe_sqrt(zero);
     EXPECT_DOUBLE_EQ(sqrt_zero.get(), 0.0);
 
     PositiveDouble e_val{std::numbers::e, runtime_check};
-    double log_e = refine::safe_log(e_val);
+    double log_e = refined::safe_log(e_val);
     EXPECT_NEAR(log_e, 1.0, 1e-10);
 
     PositiveDouble one{1.0, runtime_check};
-    double log_one = refine::safe_log(one);
+    double log_one = refined::safe_log(one);
     EXPECT_NEAR(log_one, 0.0, 1e-10);
 
     NormalizedDouble half{0.5, runtime_check};
-    double asin_half = refine::safe_asin(half);
+    double asin_half = refined::safe_asin(half);
     EXPECT_NEAR(asin_half, std::asin(0.5), 1e-10);
 
-    double acos_half = refine::safe_acos(half);
+    double acos_half = refined::safe_acos(half);
     EXPECT_NEAR(acos_half, std::acos(0.5), 1e-10);
 
     NonZeroDouble nz{4.0, runtime_check};
-    double recip = refine::safe_reciprocal(nz);
+    double recip = refined::safe_reciprocal(nz);
     EXPECT_NEAR(recip, 0.25, 1e-10);
 
     NonZeroDouble neg_nz{-2.0, runtime_check};
-    double recip_neg = refine::safe_reciprocal(neg_nz);
+    double recip_neg = refined::safe_reciprocal(neg_nz);
     EXPECT_NEAR(recip_neg, -0.5, 1e-10);
 }
 

@@ -2,9 +2,9 @@
 //
 // Expected: refined_passthrough and plain_passthrough produce identical assembly.
 
-#include <rcpp/refine.hpp>
+#include <rcpp/refined.hpp>
 
-using namespace refine;
+using namespace refined;
 
 __attribute__((noinline))
 int refined_passthrough(Refined<int, Positive> x) {

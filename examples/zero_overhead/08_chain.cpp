@@ -4,10 +4,10 @@
 // This exercises square (returns NonNegative), addition (preserves NonNegative),
 // and safe_sqrt (preserves NonNegative).
 
-#include <rcpp/refine.hpp>
+#include <rcpp/refined.hpp>
 #include <cmath>
 
-using namespace refine;
+using namespace refined;
 
 __attribute__((noinline))
 double refined_hypot(Refined<double, NonNegative> x,

@@ -3,9 +3,9 @@
 // Refined's comparison operators delegate to the underlying value's
 // three-way comparison, which should produce identical instructions.
 
-#include <rcpp/refine.hpp>
+#include <rcpp/refined.hpp>
 
-using namespace refine;
+using namespace refined;
 
 __attribute__((noinline))
 bool refined_less(Refined<int, Positive> a, Refined<int, Positive> b) {

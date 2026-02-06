@@ -7,9 +7,9 @@
 // For integers, overflow can violate Positive, so operator* returns
 // std::optional and includes a runtime check (branch).
 
-#include <rcpp/refine.hpp>
+#include <rcpp/refined.hpp>
 
-using namespace refine;
+using namespace refined;
 
 // --- Floating-point: zero overhead ---
 

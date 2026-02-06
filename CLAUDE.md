@@ -28,18 +28,18 @@ Requires GCC 16+ with C++26 reflection support. The `-freflection` flag is added
 
 ## Architecture
 
-Header-only C++26 library providing Liquid Haskell-style refinement types. Everything lives in the `refine::` namespace.
+Header-only C++26 library providing Liquid Haskell-style refinement types. Everything lives in the `refined::` namespace.
 
 All public headers live in `include/rcpp/`.
 
 ### Header Dependency Graph
 
 ```
-refine.hpp  (main entry point, type aliases, convenience macros)
+refined.hpp  (main entry point, type aliases, convenience macros)
   ├── diagnostics.hpp   (refinement_error, tag types, reflection-based formatting)
   ├── predicates.hpp    (35+ standard predicates: Positive, NonZero, InRange, Even, Finite, NotNaN, etc.)
   ├── compose.hpp       (All<>, Any<>, Not<>, If<>, runtime composition)
-  ├── refined.hpp       (core Refined<T, Predicate> template)
+  ├── refined_type.hpp  (core Refined<T, Predicate> template)
   └── operations.hpp    (safe arithmetic with predicate preservation traits, safe float math)
 ```
 
@@ -54,7 +54,7 @@ refine.hpp  (main entry point, type aliases, convenience macros)
 
 **Operations** (`operations.hpp`) use a `traits::preserves<Predicate, Operation>` trait system to determine if arithmetic preserves a refinement (e.g., Positive + Positive = Positive). When preservation is provable, operations return `Refined`; otherwise they return `std::optional<Refined>`. Safe float math functions (`safe_sqrt`, `safe_log`, `safe_asin`, `safe_acos`, `safe_reciprocal`) accept specifically-refined inputs (e.g., `Refined<T, Positive>`) and return `Refined` when the predicate is preserved, or plain `T` otherwise.
 
-### Key Type Aliases (defined in `refine.hpp`)
+### Key Type Aliases (defined in `refined.hpp`)
 
 `PositiveInt`, `NonZeroInt`, `NonNegativeInt`, `PositiveDouble`, `NonZeroDouble`, `FiniteFloat`, `FiniteDouble`, `NormalizedFloat`, `NormalizedDouble`, `UnitFloat`, `UnitDouble`, `Percentage`, `Probability`, `ByteValue`, `PortNumber`, `Natural`, `Whole`, etc. Created via explicit `using` declarations and the `DEFINE_PREDICATE` macro.
 
