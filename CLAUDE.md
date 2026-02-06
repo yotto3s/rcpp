@@ -36,13 +36,15 @@ All public headers live in `include/refinery/`.
 ### Header Dependency Graph
 
 ```
-refinery.hpp  (main entry point, type aliases, convenience macros)
+refinery.hpp  (main entry point, type aliases)
   ├── diagnostics.hpp   (refinement_error, tag types, reflection-based formatting)
   ├── predicates.hpp    (35+ standard predicates: Positive, NonZero, InRange, Even, Finite, NotNaN, etc.)
   ├── compose.hpp       (All<>, Any<>, Not<>, If<>, runtime composition)
   ├── refined_type.hpp  (core Refined<T, Predicate> template)
   ├── operations.hpp    (safe arithmetic with predicate preservation traits, safe float math)
   └── interval.hpp      (Interval<Lo,Hi> structural predicate, compile-time interval arithmetic)
+domain.hpp    (domain-specific aliases: Percentage, Probability, etc.)
+  └── refinery.hpp
 ```
 
 ### Core Design
@@ -60,7 +62,7 @@ refinery.hpp  (main entry point, type aliases, convenience macros)
 
 ### Key Type Aliases (defined in `refinery.hpp`)
 
-`PositiveInt`, `NonZeroInt`, `NonNegativeInt`, `PositiveDouble`, `NonZeroDouble`, `FiniteFloat`, `FiniteDouble`, `NormalizedFloat`, `NormalizedDouble`, `UnitFloat`, `UnitDouble`, `Percentage`, `Probability`, `ByteValue`, `PortNumber`, `Natural`, `Whole`, etc. Created via explicit `using` declarations and the `DEFINE_PREDICATE` macro.
+`PositiveI32`, `NonZeroI32`, `NonNegativeI32`, `PositiveI64`, `NonZeroI64`, `NonZeroU32`, `NonZeroU64`, `NonZeroUsize`, `PositiveF64`, `NonZeroF64`, `FiniteF32`, `FiniteF64`, `NormalizedF32`, `NormalizedF64`, etc. Domain aliases (`Percentage`, `Probability`, `UnitFloat`, `UnitDouble`, `ByteValue`, `PortNumber`, `Natural`, `Whole`) are in `domain.hpp`.
 
 ### Zero-Overhead Examples (`examples/zero_overhead/`)
 
