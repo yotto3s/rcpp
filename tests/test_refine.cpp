@@ -790,6 +790,37 @@ TEST(CheckedArith, MulOverflow) {
     using refinery::detail::checked_mul;
     EXPECT_THROW(checked_mul(std::numeric_limits<int>::max(), 2), refinement_error);
     EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), 2), refinement_error);
+    // INT_MIN * -1 overflows (|INT_MIN| > INT_MAX)
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), -1), refinement_error);
+    EXPECT_THROW(checked_mul(-1, std::numeric_limits<int>::min()), refinement_error);
+}
+
+TEST(SaturatingArith, EdgeCases) {
+    using namespace refinery::interval_math::detail;
+    constexpr auto imax = std::numeric_limits<int>::max();
+    constexpr auto imin = std::numeric_limits<int>::min();
+
+    // sat_add clamps on overflow
+    static_assert(sat_add(imax, 1) == imax);
+    static_assert(sat_add(imin, -1) == imin);
+    static_assert(sat_add(3, 5) == 8);
+
+    // sat_sub clamps on overflow
+    static_assert(sat_sub(imin, 1) == imin);
+    static_assert(sat_sub(imax, -1) == imax);
+    static_assert(sat_sub(10, 3) == 7);
+
+    // sat_mul clamps on overflow
+    static_assert(sat_mul(imax, 2) == imax);
+    static_assert(sat_mul(imin, 2) == imin);
+    static_assert(sat_mul(imax, imax) == imax);
+    static_assert(sat_mul(3, 5) == 15);
+    static_assert(sat_mul(0, imax) == 0);
+
+    // sat_neg: conservative for INT_MIN
+    static_assert(sat_neg(imin) == imax);
+    static_assert(sat_neg(-5) == 5);
+    static_assert(sat_neg(0) == 0);
 }
 
 TEST(Interval, IntegerOverflowThrows) {

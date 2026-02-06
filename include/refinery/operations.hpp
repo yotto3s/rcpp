@@ -139,7 +139,9 @@ operator+(const Refined<T, Pred>& val) {
     return val;
 }
 
-// Increment/decrement operations that return optionals
+// Increment/decrement preserve the *same* predicate type (unlike arithmetic
+// operators which widen to a new interval). Returns optional because the
+// incremented value may no longer satisfy the original predicate.
 template <typename T, auto Pred>
 [[nodiscard]] constexpr std::optional<Refined<T, Pred>>
 increment(const Refined<T, Pred>& val) {

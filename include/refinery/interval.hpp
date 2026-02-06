@@ -120,6 +120,8 @@ consteval T sat_mul(T a, T b) {
     return a * b;
 }
 
+// Conservative: sat_neg(INT_MIN) returns INT_MAX (true |INT_MIN| is INT_MAX+1).
+// This widens the result interval by 1 — a safe over-approximation.
 template <typename T>
 consteval T sat_neg(T a) {
     if constexpr (std::integral<T>) {

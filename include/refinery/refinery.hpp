@@ -65,7 +65,8 @@ using NonPositiveInt = IntervalRefined<int, std::numeric_limits<int>::min(), 0>;
 using NonPositiveLong = IntervalRefined<long, std::numeric_limits<long>::min(), 0L>;
 using NonPositiveLongLong = IntervalRefined<long long, std::numeric_limits<long long>::min(), 0LL>;
 
-// Non-zero integers (!= 0)
+// Non-zero integers (!= 0) — predicate-based (cannot be a single interval).
+// Arithmetic on NonZero types returns plain T, not interval-refined results.
 using NonZeroInt = Refined<int, NonZero>;
 using NonZeroLong = Refined<long, NonZero>;
 using NonZeroLongLong = Refined<long long, NonZero>;
