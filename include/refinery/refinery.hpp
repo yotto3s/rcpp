@@ -16,15 +16,15 @@
 //   }
 //
 //   // Compile-time verification
-//   consteval int demo() {
-//       PositiveInt x{42};      // OK
-//       // PositiveInt y{-1};   // COMPILE ERROR with rich message
-//       return safe_divide(100, NonZeroInt{2});
+//   consteval std::int32_t demo() {
+//       PositiveI32 x{42};      // OK
+//       // PositiveI32 y{-1};   // COMPILE ERROR with rich message
+//       return safe_divide(std::int32_t{100}, NonZeroI32{2});
 //   }
 //
 //   // Runtime validation
 //   void process(int user_input) {
-//       if (auto validated = try_refine<PositiveInt>(user_input)) {
+//       if (auto validated = try_refine<PositiveI32>(user_input)) {
 //           use(*validated);
 //       } else {
 //           handle_invalid_input();
@@ -33,6 +33,10 @@
 
 #ifndef REFINERY_REFINERY_HPP
 #define REFINERY_REFINERY_HPP
+
+#include <cstddef>
+#include <cstdint>
+#include <limits>
 
 #include "compose.hpp"
 #include "diagnostics.hpp"
@@ -43,95 +47,100 @@
 
 namespace refinery {
 
-// Common refined type aliases
+// --- Signed integers ---
 
 // Positive integers (> 0) — interval-based for arithmetic ergonomics
-using PositiveInt = IntervalRefined<int, 1, std::numeric_limits<int>::max()>;
-using PositiveLong =
-    IntervalRefined<long, 1L, std::numeric_limits<long>::max()>;
-using PositiveLongLong =
-    IntervalRefined<long long, 1LL, std::numeric_limits<long long>::max()>;
+using PositiveI8 = IntervalRefined<std::int8_t, std::int8_t{1},
+                                   std::numeric_limits<std::int8_t>::max()>;
+using PositiveI16 = IntervalRefined<std::int16_t, std::int16_t{1},
+                                    std::numeric_limits<std::int16_t>::max()>;
+using PositiveI32 = IntervalRefined<std::int32_t, std::int32_t{1},
+                                    std::numeric_limits<std::int32_t>::max()>;
+using PositiveI64 = IntervalRefined<std::int64_t, std::int64_t{1},
+                                    std::numeric_limits<std::int64_t>::max()>;
 
 // Negative integers (< 0) — interval-based
-using NegativeInt = IntervalRefined<int, std::numeric_limits<int>::min(), -1>;
-using NegativeLong =
-    IntervalRefined<long, std::numeric_limits<long>::min(), -1L>;
-using NegativeLongLong =
-    IntervalRefined<long long, std::numeric_limits<long long>::min(), -1LL>;
+using NegativeI8 =
+    IntervalRefined<std::int8_t, std::numeric_limits<std::int8_t>::min(),
+                    std::int8_t{-1}>;
+using NegativeI16 =
+    IntervalRefined<std::int16_t, std::numeric_limits<std::int16_t>::min(),
+                    std::int16_t{-1}>;
+using NegativeI32 =
+    IntervalRefined<std::int32_t, std::numeric_limits<std::int32_t>::min(),
+                    std::int32_t{-1}>;
+using NegativeI64 =
+    IntervalRefined<std::int64_t, std::numeric_limits<std::int64_t>::min(),
+                    std::int64_t{-1}>;
 
 // Non-negative integers (>= 0) — interval-based
-using NonNegativeInt = IntervalRefined<int, 0, std::numeric_limits<int>::max()>;
-using NonNegativeLong =
-    IntervalRefined<long, 0L, std::numeric_limits<long>::max()>;
-using NonNegativeLongLong =
-    IntervalRefined<long long, 0LL, std::numeric_limits<long long>::max()>;
+using NonNegativeI8 = IntervalRefined<std::int8_t, std::int8_t{0},
+                                      std::numeric_limits<std::int8_t>::max()>;
+using NonNegativeI16 =
+    IntervalRefined<std::int16_t, std::int16_t{0},
+                    std::numeric_limits<std::int16_t>::max()>;
+using NonNegativeI32 =
+    IntervalRefined<std::int32_t, std::int32_t{0},
+                    std::numeric_limits<std::int32_t>::max()>;
+using NonNegativeI64 =
+    IntervalRefined<std::int64_t, std::int64_t{0},
+                    std::numeric_limits<std::int64_t>::max()>;
 
 // Non-positive integers (<= 0) — interval-based
-using NonPositiveInt = IntervalRefined<int, std::numeric_limits<int>::min(), 0>;
-using NonPositiveLong =
-    IntervalRefined<long, std::numeric_limits<long>::min(), 0L>;
-using NonPositiveLongLong =
-    IntervalRefined<long long, std::numeric_limits<long long>::min(), 0LL>;
+using NonPositiveI8 =
+    IntervalRefined<std::int8_t, std::numeric_limits<std::int8_t>::min(),
+                    std::int8_t{0}>;
+using NonPositiveI16 =
+    IntervalRefined<std::int16_t, std::numeric_limits<std::int16_t>::min(),
+                    std::int16_t{0}>;
+using NonPositiveI32 =
+    IntervalRefined<std::int32_t, std::numeric_limits<std::int32_t>::min(),
+                    std::int32_t{0}>;
+using NonPositiveI64 =
+    IntervalRefined<std::int64_t, std::numeric_limits<std::int64_t>::min(),
+                    std::int64_t{0}>;
 
 // Non-zero integers (!= 0) — predicate-based (cannot be a single interval).
 // Arithmetic on NonZero types returns plain T, not interval-refined results.
-using NonZeroInt = Refined<int, NonZero>;
-using NonZeroLong = Refined<long, NonZero>;
-using NonZeroLongLong = Refined<long long, NonZero>;
+using NonZeroI8 = Refined<std::int8_t, NonZero>;
+using NonZeroI16 = Refined<std::int16_t, NonZero>;
+using NonZeroI32 = Refined<std::int32_t, NonZero>;
+using NonZeroI64 = Refined<std::int64_t, NonZero>;
 
-// Positive floating point
-using PositiveFloat = Refined<float, Positive>;
-using PositiveDouble = Refined<double, Positive>;
+// --- Unsigned integers (NonZero only — Positive ≡ NonZero, NonNegative always
+// true) ---
 
-// Non-negative floating point
-using NonNegativeFloat = Refined<float, NonNegative>;
-using NonNegativeDouble = Refined<double, NonNegative>;
+using NonZeroU8 = Refined<std::uint8_t, NonZero>;
+using NonZeroU16 = Refined<std::uint16_t, NonZero>;
+using NonZeroU32 = Refined<std::uint32_t, NonZero>;
+using NonZeroU64 = Refined<std::uint64_t, NonZero>;
 
-// Non-zero floating point
-using NonZeroFloat = Refined<float, NonZero>;
-using NonZeroDouble = Refined<double, NonZero>;
+// --- Size type (NonZero only — same reasoning as unsigned) ---
 
-// Percentage type (0-100)
-inline constexpr auto IsPercentage = InRange(0, 100);
-using Percentage = Refined<int, IsPercentage>;
+using NonZeroUsize = Refined<std::size_t, NonZero>;
 
-// Probability type (0.0-1.0)
-inline constexpr auto IsProbability = [](double v) constexpr {
-    return v >= 0.0 && v <= 1.0;
-};
-using Probability = Refined<double, IsProbability>;
+// --- Floating point ---
 
-// Finite floating point
-using FiniteFloat = Refined<float, Finite>;
-using FiniteDouble = Refined<double, Finite>;
+using PositiveF32 = Refined<float, Positive>;
+using PositiveF64 = Refined<double, Positive>;
 
-// Normalized floating point [-1, 1]
-using NormalizedFloat = Refined<float, Normalized>;
-using NormalizedDouble = Refined<double, Normalized>;
+using NegativeF32 = Refined<float, Negative>;
+using NegativeF64 = Refined<double, Negative>;
 
-// Unit interval [0, 1]
-inline constexpr auto IsUnit = [](auto v) constexpr {
-    return v >= decltype(v){0} && v <= decltype(v){1};
-};
-using UnitFloat = Refined<float, IsUnit>;
-using UnitDouble = Refined<double, IsUnit>;
+using NonNegativeF32 = Refined<float, NonNegative>;
+using NonNegativeF64 = Refined<double, NonNegative>;
 
-// Byte value (0-255)
-inline constexpr auto IsByte = InRange(0, 255);
-using ByteValue = Refined<int, IsByte>;
+using NonPositiveF32 = Refined<float, NonPositive>;
+using NonPositiveF64 = Refined<double, NonPositive>;
 
-// Port number (1-65535)
-inline constexpr auto IsPort = InRange(1, 65535);
-using PortNumber = Refined<int, IsPort>;
+using NonZeroF32 = Refined<float, NonZero>;
+using NonZeroF64 = Refined<double, NonZero>;
 
-// Natural numbers (positive integers)
-using Natural = PositiveInt;
+using FiniteF32 = Refined<float, Finite>;
+using FiniteF64 = Refined<double, Finite>;
 
-// Whole numbers (non-negative integers)
-using Whole = NonNegativeInt;
-
-// Helper to create a named predicate with documentation
-#define DEFINE_PREDICATE(Name, ...) inline constexpr auto Name = __VA_ARGS__
+using NormalizedF32 = Refined<float, Normalized>;
+using NormalizedF64 = Refined<double, Normalized>;
 
 } // namespace refinery
 

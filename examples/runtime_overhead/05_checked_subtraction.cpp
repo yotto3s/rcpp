@@ -1,7 +1,7 @@
 // 05_checked_subtraction.cpp — Proves interval-based integer subtraction with
 // overflow checking matches hand-written checked subtraction equivalent
 //
-// PositiveInt - PositiveInt has trivially-wide bounds, so the result degrades
+// PositiveI32 - PositiveI32 has trivially-wide bounds, so the result degrades
 // to plain int. The runtime cost is just checked_sub. The plain version does
 // the same overflow check manually.
 //
@@ -12,7 +12,7 @@
 using namespace refinery;
 
 __attribute__((noinline)) int
-refined_sub_positive(PositiveInt a, PositiveInt b) {
+refined_sub_positive(PositiveI32 a, PositiveI32 b) {
     return a - b;
 }
 
@@ -22,8 +22,8 @@ plain_sub_positive(int a, int b) {
 }
 
 int main() {
-    auto a = PositiveInt(30, assume_valid);
-    auto b = PositiveInt(10, assume_valid);
+    auto a = PositiveI32(30, assume_valid);
+    auto b = PositiveI32(10, assume_valid);
 
     volatile int sink;
     sink = refined_sub_positive(a, b);

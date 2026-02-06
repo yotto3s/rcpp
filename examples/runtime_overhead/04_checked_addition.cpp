@@ -11,7 +11,7 @@
 using namespace refinery;
 
 __attribute__((noinline)) int
-refined_add_positive(PositiveInt a, PositiveInt b) {
+refined_add_positive(PositiveI32 a, PositiveI32 b) {
     return (a + b).get();
 }
 
@@ -21,8 +21,8 @@ plain_add_positive(int a, int b) {
 }
 
 int main() {
-    auto a = PositiveInt(10, assume_valid);
-    auto b = PositiveInt(20, assume_valid);
+    auto a = PositiveI32(10, assume_valid);
+    auto b = PositiveI32(20, assume_valid);
 
     volatile int sink;
     sink = refined_add_positive(a, b);

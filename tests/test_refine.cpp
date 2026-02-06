@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 #include <limits>
 #include <numbers>
+#include <refinery/domain.hpp>
 #include <refinery/refinery.hpp>
 
 using namespace refinery;
@@ -32,13 +33,13 @@ constexpr T sqrt_positive(Refined<T, Positive> x)
 // ---- Consteval test functions ----
 
 consteval int test_compile_time_construction() {
-    PositiveInt p1{42};
-    PositiveInt p2{1};
+    PositiveI32 p1{42};
+    PositiveI32 p2{1};
 
-    NonZeroInt nz{-5};
-    NonNegativeInt nn{0};
+    NonZeroI32 nz{-5};
+    NonNegativeI32 nn{0};
 
-    Percentage pct{50};
+    Percentage<> pct{50};
 
     if (p1.get() != 42)
         throw "p1 should be 42";
@@ -55,10 +56,10 @@ consteval int test_compile_time_construction() {
 }
 
 consteval double test_float_compile_time() {
-    PositiveDouble pd{3.14};
-    FiniteDouble fd{2.718};
-    NormalizedDouble nd{0.5};
-    UnitDouble ud{0.75};
+    PositiveF64 pd{3.14};
+    FiniteF64 fd{2.718};
+    NormalizedF64 nd{0.5};
+    UnitDouble<> ud{0.75};
 
     if (pd.get() != 3.14)
         throw "pd should be 3.14";
@@ -86,41 +87,41 @@ TEST(CompileTime, FloatConstruction) {
     EXPECT_DOUBLE_EQ(ct_float_result, 3.14);
 }
 
-TEST(RuntimeConstruction, ValidPositiveInt) {
-    PositiveInt p{42, runtime_check};
+TEST(RuntimeConstruction, ValidPositiveI32) {
+    PositiveI32 p{42, runtime_check};
     EXPECT_EQ(p.get(), 42);
 }
 
 TEST(RuntimeConstruction, InvalidThrows) {
-    EXPECT_THROW(PositiveInt(-1, runtime_check), refinement_error);
+    EXPECT_THROW(PositiveI32(-1, runtime_check), refinement_error);
 }
 
 TEST(RuntimeConstruction, FloatTypes) {
-    FiniteDouble fd{1.5, runtime_check};
+    FiniteF64 fd{1.5, runtime_check};
     EXPECT_EQ(fd.get(), 1.5);
 
-    NormalizedDouble nd{-0.5, runtime_check};
+    NormalizedF64 nd{-0.5, runtime_check};
     EXPECT_EQ(nd.get(), -0.5);
 
-    UnitDouble ud{0.5, runtime_check};
+    UnitDouble<> ud{0.5, runtime_check};
     EXPECT_EQ(ud.get(), 0.5);
 
     EXPECT_THROW(
-        FiniteDouble(std::numeric_limits<double>::quiet_NaN(), runtime_check),
+        FiniteF64(std::numeric_limits<double>::quiet_NaN(), runtime_check),
         refinement_error);
     EXPECT_THROW(
-        FiniteDouble(std::numeric_limits<double>::infinity(), runtime_check),
+        FiniteF64(std::numeric_limits<double>::infinity(), runtime_check),
         refinement_error);
-    EXPECT_THROW(NormalizedDouble(2.0, runtime_check), refinement_error);
-    EXPECT_THROW(UnitDouble(-0.1, runtime_check), refinement_error);
+    EXPECT_THROW(NormalizedF64(2.0, runtime_check), refinement_error);
+    EXPECT_THROW((UnitDouble<>(-0.1, runtime_check)), refinement_error);
 }
 
 TEST(TryRefine, ValidAndInvalid) {
-    auto maybe_positive = try_refine<PositiveInt>(42);
+    auto maybe_positive = try_refine<PositiveI32>(42);
     ASSERT_TRUE(maybe_positive.has_value());
     EXPECT_EQ(maybe_positive->get(), 42);
 
-    auto maybe_negative = try_refine<PositiveInt>(-1);
+    auto maybe_negative = try_refine<PositiveI32>(-1);
     EXPECT_FALSE(maybe_negative.has_value());
 
     auto maybe_even = try_refine<Even>(4);
@@ -227,8 +228,8 @@ TEST(Composition, AllAnyNotIf) {
 }
 
 TEST(Operations, SafeArithmetic) {
-    constexpr NonZeroInt denom{2};
-    constexpr int result = safe_divide(10, denom);
+    constexpr NonZeroI32 denom{2};
+    constexpr std::int32_t result = safe_divide(std::int32_t{10}, denom);
     static_assert(result == 5);
 
     constexpr auto abs_neg = refinery::abs(-5);
@@ -239,8 +240,8 @@ TEST(Operations, SafeArithmetic) {
     EXPECT_EQ(sq.get(), 9);
     EXPECT_TRUE(NonNegative(sq.get()));
 
-    constexpr PositiveInt a{5};
-    constexpr PositiveInt b{3};
+    constexpr PositiveI32 a{5};
+    constexpr PositiveI32 b{3};
     constexpr auto min_ab = refined_min(a, b);
     static_assert(min_ab.get() == 3);
 
@@ -254,14 +255,14 @@ TEST(Operations, SafeArithmetic) {
     EXPECT_EQ(int_prod.get(), 15);
 
     // Float arithmetic returns Refined directly (no overflow to negative)
-    PositiveDouble fa{5.0, runtime_check};
-    PositiveDouble fb{3.0, runtime_check};
+    PositiveF64 fa{5.0, runtime_check};
+    PositiveF64 fb{3.0, runtime_check};
     auto float_sum = fa + fb;
-    static_assert(std::same_as<decltype(float_sum), PositiveDouble>);
+    static_assert(std::same_as<decltype(float_sum), PositiveF64>);
     EXPECT_DOUBLE_EQ(float_sum.get(), 8.0);
 
     auto float_prod = fa * fb;
-    static_assert(std::same_as<decltype(float_prod), PositiveDouble>);
+    static_assert(std::same_as<decltype(float_prod), PositiveF64>);
     EXPECT_DOUBLE_EQ(float_prod.get(), 15.0);
 }
 
@@ -291,60 +292,60 @@ TEST(Operations, IntegerOverflow) {
 }
 
 TEST(Operations, FloatMath) {
-    NonNegativeDouble nn{4.0, runtime_check};
+    NonNegativeF64 nn{4.0, runtime_check};
     auto sqrt_nn = refinery::safe_sqrt(nn);
     EXPECT_NEAR(sqrt_nn.get(), 2.0, 1e-10);
     EXPECT_TRUE(NonNegative(sqrt_nn.get()));
 
-    PositiveDouble pd{9.0, runtime_check};
+    PositiveF64 pd{9.0, runtime_check};
     auto sqrt_pd = refinery::safe_sqrt(pd);
     EXPECT_NEAR(sqrt_pd.get(), 3.0, 1e-10);
     EXPECT_TRUE(Positive(sqrt_pd.get()));
 
-    NonNegativeDouble zero{0.0, runtime_check};
+    NonNegativeF64 zero{0.0, runtime_check};
     auto sqrt_zero = refinery::safe_sqrt(zero);
     EXPECT_DOUBLE_EQ(sqrt_zero.get(), 0.0);
 
-    PositiveDouble e_val{std::numbers::e, runtime_check};
+    PositiveF64 e_val{std::numbers::e, runtime_check};
     double log_e = refinery::safe_log(e_val);
     EXPECT_NEAR(log_e, 1.0, 1e-10);
 
-    PositiveDouble one{1.0, runtime_check};
+    PositiveF64 one{1.0, runtime_check};
     double log_one = refinery::safe_log(one);
     EXPECT_NEAR(log_one, 0.0, 1e-10);
 
-    NormalizedDouble half{0.5, runtime_check};
+    NormalizedF64 half{0.5, runtime_check};
     double asin_half = refinery::safe_asin(half);
     EXPECT_NEAR(asin_half, std::asin(0.5), 1e-10);
 
     double acos_half = refinery::safe_acos(half);
     EXPECT_NEAR(acos_half, std::acos(0.5), 1e-10);
 
-    NonZeroDouble nz{4.0, runtime_check};
+    NonZeroF64 nz{4.0, runtime_check};
     double recip = refinery::safe_reciprocal(nz);
     EXPECT_NEAR(recip, 0.25, 1e-10);
 
-    NonZeroDouble neg_nz{-2.0, runtime_check};
+    NonZeroF64 neg_nz{-2.0, runtime_check};
     double recip_neg = refinery::safe_reciprocal(neg_nz);
     EXPECT_NEAR(recip_neg, -0.5, 1e-10);
 }
 
 TEST(TypeAliases, All) {
-    constexpr Percentage pct{75};
+    constexpr Percentage<> pct{75};
     static_assert(pct.get() == 75);
 
-    constexpr Probability prob{0.5};
+    constexpr Probability<> prob{0.5};
     static_assert(prob.get() == 0.5);
 
-    constexpr ByteValue byte{255};
+    constexpr ByteValue<> byte{255};
     static_assert(byte.get() == 255);
 
-    constexpr PortNumber port{8080};
+    constexpr PortNumber<> port{8080};
     static_assert(port.get() == 8080);
 }
 
 TEST(Conversion, ImplicitToUnderlying) {
-    constexpr PositiveInt p{42};
+    constexpr PositiveI32 p{42};
 
     constexpr int i = p;
     static_assert(i == 42);
@@ -355,7 +356,7 @@ TEST(Conversion, ImplicitToUnderlying) {
 }
 
 TEST(Formatting, StdFormat) {
-    PositiveInt p{42, runtime_check};
+    PositiveI32 p{42, runtime_check};
     std::string formatted = std::format("Value: {}", p);
     EXPECT_EQ(formatted, "Value: 42");
 }
@@ -370,15 +371,15 @@ TEST(SafeArrayAccess, BoundedIndex) {
 }
 
 TEST(Examples, SqrtPositive) {
-    PositiveDouble pd{4.0, runtime_check};
+    PositiveF64 pd{4.0, runtime_check};
     double result = sqrt_positive(pd);
     EXPECT_NEAR(result, 2.0, 0.1);
 }
 
 TEST(Comparisons, OrderingAndEquality) {
-    constexpr PositiveInt a{5};
-    constexpr PositiveInt b{3};
-    constexpr PositiveInt c{5};
+    constexpr PositiveI32 a{5};
+    constexpr PositiveI32 b{3};
+    constexpr PositiveI32 c{5};
 
     static_assert(a == c);
     static_assert(!(a == b));
@@ -392,13 +393,13 @@ TEST(Comparisons, OrderingAndEquality) {
 }
 
 TEST(IsValid, StaticValidation) {
-    static_assert(PositiveInt::is_valid(5));
-    static_assert(!PositiveInt::is_valid(-5));
-    static_assert(!PositiveInt::is_valid(0));
+    static_assert(PositiveI32::is_valid(5));
+    static_assert(!PositiveI32::is_valid(-5));
+    static_assert(!PositiveI32::is_valid(0));
 
-    static_assert(NonZeroInt::is_valid(5));
-    static_assert(NonZeroInt::is_valid(-5));
-    static_assert(!NonZeroInt::is_valid(0));
+    static_assert(NonZeroI32::is_valid(5));
+    static_assert(NonZeroI32::is_valid(-5));
+    static_assert(!NonZeroI32::is_valid(0));
 }
 
 TEST(FloatEdgeCases, SpecialValues) {
@@ -424,10 +425,10 @@ TEST(FloatEdgeCases, SpecialValues) {
     EXPECT_FALSE(Finite(std::numeric_limits<float>::infinity()));
     EXPECT_FALSE(Finite(std::numeric_limits<double>::infinity()));
 
-    FiniteFloat ff{1.5f, runtime_check};
+    FiniteF32 ff{1.5f, runtime_check};
     EXPECT_EQ(ff.get(), 1.5f);
 
-    NormalizedFloat nf{-0.5f, runtime_check};
+    NormalizedF32 nf{-0.5f, runtime_check};
     EXPECT_EQ(nf.get(), -0.5f);
 }
 
@@ -698,15 +699,16 @@ TEST(Composition, RuntimeComposition) {
 }
 
 TEST(Operations, TransformRefined) {
-    PositiveInt p{5, runtime_check};
+    PositiveI32 p{5, runtime_check};
     auto doubled =
-        transform_refined<NonNegative>(p, [](int v) { return v * 2; });
+        transform_refined<NonNegative>(p, [](std::int32_t v) { return v * 2; });
     EXPECT_EQ(doubled.get(), 10);
-    static_assert(std::same_as<decltype(doubled), Refined<int, NonNegative>>);
+    static_assert(
+        std::same_as<decltype(doubled), Refined<std::int32_t, NonNegative>>);
 }
 
 TEST(Operations, IncrementDecrement) {
-    PositiveInt p{1, runtime_check};
+    PositiveI32 p{1, runtime_check};
 
     auto inc = increment(p);
     ASSERT_TRUE(inc.has_value());
@@ -716,7 +718,7 @@ TEST(Operations, IncrementDecrement) {
     // Decrementing 1 gives 0, which is not Positive
     EXPECT_FALSE(dec.has_value());
 
-    NonNegativeInt nn{0, runtime_check};
+    NonNegativeI32 nn{0, runtime_check};
     auto dec_nn = decrement(nn);
     // Decrementing 0 gives -1, which is not NonNegative
     EXPECT_FALSE(dec_nn.has_value());
@@ -727,29 +729,29 @@ TEST(Operations, IncrementDecrement) {
 }
 
 TEST(Operations, RefinedClamp) {
-    PositiveInt lo{1, runtime_check};
-    PositiveInt hi{10, runtime_check};
-    PositiveInt val{5, runtime_check};
+    PositiveI32 lo{1, runtime_check};
+    PositiveI32 hi{10, runtime_check};
+    PositiveI32 val{5, runtime_check};
 
     auto clamped = refined_clamp(val, lo, hi);
     EXPECT_EQ(clamped.get(), 5);
 
-    PositiveInt below{1, runtime_check};
-    PositiveInt above{20, runtime_check};
+    PositiveI32 below{1, runtime_check};
+    PositiveI32 above{20, runtime_check};
     auto clamped_above = refined_clamp(above, lo, hi);
     EXPECT_EQ(clamped_above.get(), 10);
 }
 
 TEST(Concept, IsRefined) {
-    static_assert(is_refined<PositiveInt>);
-    static_assert(is_refined<NonZeroDouble>);
-    static_assert(is_refined<Percentage>);
+    static_assert(is_refined<PositiveI32>);
+    static_assert(is_refined<NonZeroF64>);
+    static_assert(is_refined<Percentage<>>);
     static_assert(!is_refined<int>);
     static_assert(!is_refined<double>);
 
     // Works with curried predicates (capturing lambdas)
     static_assert(is_refined<Refined<int, InRange(0, 100)>>);
-    static_assert(is_refined<UnitDouble>);
+    static_assert(is_refined<UnitDouble<>>);
 }
 
 // ---- Checked Arithmetic Tests ----
@@ -884,35 +886,35 @@ TEST(Interval, FloatNoThrow) {
 
 // ---- Interval Alias Tests ----
 
-TEST(IntervalAliases, PositiveIntIsInterval) {
-    static_assert(interval_predicate<PositiveInt::predicate>);
-    static_assert(decltype(PositiveInt::predicate)::lo == 1);
-    static_assert(decltype(PositiveInt::predicate)::hi ==
+TEST(IntervalAliases, PositiveI32IsInterval) {
+    static_assert(interval_predicate<PositiveI32::predicate>);
+    static_assert(decltype(PositiveI32::predicate)::lo == 1);
+    static_assert(decltype(PositiveI32::predicate)::hi ==
                   std::numeric_limits<int>::max());
 
-    constexpr PositiveInt p{42};
+    constexpr PositiveI32 p{42};
     static_assert(p.get() == 42);
 
-    PositiveInt pr{42, runtime_check};
+    PositiveI32 pr{42, runtime_check};
     EXPECT_EQ(pr.get(), 42);
-    EXPECT_THROW(PositiveInt(0, runtime_check), refinement_error);
-    EXPECT_THROW(PositiveInt(-1, runtime_check), refinement_error);
+    EXPECT_THROW(PositiveI32(0, runtime_check), refinement_error);
+    EXPECT_THROW(PositiveI32(-1, runtime_check), refinement_error);
 }
 
-TEST(IntervalAliases, NonNegativeIntIsInterval) {
-    static_assert(interval_predicate<NonNegativeInt::predicate>);
-    static_assert(decltype(NonNegativeInt::predicate)::lo == 0);
-    static_assert(decltype(NonNegativeInt::predicate)::hi ==
+TEST(IntervalAliases, NonNegativeI32IsInterval) {
+    static_assert(interval_predicate<NonNegativeI32::predicate>);
+    static_assert(decltype(NonNegativeI32::predicate)::lo == 0);
+    static_assert(decltype(NonNegativeI32::predicate)::hi ==
                   std::numeric_limits<int>::max());
 
-    constexpr NonNegativeInt z{0};
+    constexpr NonNegativeI32 z{0};
     static_assert(z.get() == 0);
-    EXPECT_THROW(NonNegativeInt(-1, runtime_check), refinement_error);
+    EXPECT_THROW(NonNegativeI32(-1, runtime_check), refinement_error);
 }
 
 TEST(IntervalAliases, ArithmeticReturnsRefined) {
-    PositiveInt a{5, runtime_check};
-    PositiveInt b{3, runtime_check};
+    PositiveI32 a{5, runtime_check};
+    PositiveI32 b{3, runtime_check};
 
     auto sum = a + b;
     EXPECT_EQ(sum.get(), 8);
@@ -924,7 +926,7 @@ TEST(IntervalAliases, ArithmeticReturnsRefined) {
 }
 
 TEST(IntervalAliases, NegationTransforms) {
-    PositiveInt a{5, runtime_check};
+    PositiveI32 a{5, runtime_check};
     auto neg = -a;
     EXPECT_EQ(neg.get(), -5);
     static_assert(interval_predicate<decltype(neg)::predicate>);
@@ -932,10 +934,10 @@ TEST(IntervalAliases, NegationTransforms) {
 }
 
 TEST(IntervalAliases, SubtractionReturnsDegradedType) {
-    PositiveInt a{10, runtime_check};
-    PositiveInt b{3, runtime_check};
+    PositiveI32 a{10, runtime_check};
+    PositiveI32 b{3, runtime_check};
 
-    // PositiveInt - PositiveInt has trivially-wide bounds, returns plain int
+    // PositiveI32 - PositiveI32 has trivially-wide bounds, returns plain int
     auto diff = a - b;
     static_assert(std::same_as<decltype(diff), int>);
     EXPECT_EQ(diff, 7);
@@ -948,46 +950,46 @@ TEST(IntervalAliases, SubtractionReturnsDegradedType) {
     EXPECT_EQ(narrow_diff.get(), 30);
 }
 
-TEST(IntervalAliases, NegativeIntIsInterval) {
-    static_assert(interval_predicate<NegativeInt::predicate>);
-    static_assert(decltype(NegativeInt::predicate)::lo ==
+TEST(IntervalAliases, NegativeI32IsInterval) {
+    static_assert(interval_predicate<NegativeI32::predicate>);
+    static_assert(decltype(NegativeI32::predicate)::lo ==
                   std::numeric_limits<int>::min());
-    static_assert(decltype(NegativeInt::predicate)::hi == -1);
+    static_assert(decltype(NegativeI32::predicate)::hi == -1);
 
-    constexpr NegativeInt n{-42};
+    constexpr NegativeI32 n{-42};
     static_assert(n.get() == -42);
 
-    NegativeInt nr{-42, runtime_check};
+    NegativeI32 nr{-42, runtime_check};
     EXPECT_EQ(nr.get(), -42);
-    EXPECT_THROW(NegativeInt(0, runtime_check), refinement_error);
-    EXPECT_THROW(NegativeInt(1, runtime_check), refinement_error);
+    EXPECT_THROW(NegativeI32(0, runtime_check), refinement_error);
+    EXPECT_THROW(NegativeI32(1, runtime_check), refinement_error);
 }
 
-TEST(IntervalAliases, NonPositiveIntIsInterval) {
-    static_assert(interval_predicate<NonPositiveInt::predicate>);
-    static_assert(decltype(NonPositiveInt::predicate)::lo ==
+TEST(IntervalAliases, NonPositiveI32IsInterval) {
+    static_assert(interval_predicate<NonPositiveI32::predicate>);
+    static_assert(decltype(NonPositiveI32::predicate)::lo ==
                   std::numeric_limits<int>::min());
-    static_assert(decltype(NonPositiveInt::predicate)::hi == 0);
+    static_assert(decltype(NonPositiveI32::predicate)::hi == 0);
 
-    constexpr NonPositiveInt z{0};
+    constexpr NonPositiveI32 z{0};
     static_assert(z.get() == 0);
 
-    constexpr NonPositiveInt n{-1};
+    constexpr NonPositiveI32 n{-1};
     static_assert(n.get() == -1);
-    EXPECT_THROW(NonPositiveInt(1, runtime_check), refinement_error);
+    EXPECT_THROW(NonPositiveI32(1, runtime_check), refinement_error);
 }
 
 TEST(IntervalAliases, NegativeArithmetic) {
-    NegativeInt a{-5, runtime_check};
-    NegativeInt b{-3, runtime_check};
+    NegativeI32 a{-5, runtime_check};
+    NegativeI32 b{-3, runtime_check};
 
-    // NegativeInt + NegativeInt: [-2*INT_MAX, -2], useful bounds -> Refined
+    // NegativeI32 + NegativeI32: [-2*INT_MAX, -2], useful bounds -> Refined
     auto sum = a + b;
     EXPECT_EQ(sum.get(), -8);
     static_assert(interval_predicate<decltype(sum)::predicate>);
     static_assert(decltype(sum)::predicate.hi == -2);
 
-    // Negation of NegativeInt gives PositiveInt-like bounds
+    // Negation of NegativeI32 gives PositiveI32-like bounds
     auto neg = -a;
     EXPECT_EQ(neg.get(), 5);
     static_assert(interval_predicate<decltype(neg)::predicate>);
@@ -995,9 +997,9 @@ TEST(IntervalAliases, NegativeArithmetic) {
 }
 
 TEST(IntervalAliases, NegativeToNonPositiveConversion) {
-    // NegativeInt ([INT_MIN, -1]) is a subset of NonPositiveInt ([INT_MIN, 0])
-    NegativeInt n{-42, runtime_check};
-    NonPositiveInt np = n;
+    // NegativeI32 ([INT_MIN, -1]) is a subset of NonPositiveI32 ([INT_MIN, 0])
+    NegativeI32 n{-42, runtime_check};
+    NonPositiveI32 np = n;
     EXPECT_EQ(np.get(), -42);
 }
 
@@ -1009,12 +1011,12 @@ TEST(Implication, IntervalToInterval) {
     IntervalRefined<int, 0, 200> wider = x;
     EXPECT_EQ(wider.get(), 42);
 
-    // [1, 100] should convert to PositiveInt (Interval<1, INT_MAX>)
-    PositiveInt p = x;
+    // [1, 100] should convert to PositiveI32 (Interval<1, INT_MAX>)
+    PositiveI32 p = x;
     EXPECT_EQ(p.get(), 42);
 
-    // [1, 100] should convert to NonNegativeInt (Interval<0, INT_MAX>)
-    NonNegativeInt nn = x;
+    // [1, 100] should convert to NonNegativeI32 (Interval<0, INT_MAX>)
+    NonNegativeI32 nn = x;
     EXPECT_EQ(nn.get(), 42);
 }
 
@@ -1040,7 +1042,7 @@ TEST(Implication, PredicateToPredicate) {
 
 TEST(Implication, CompileTimeConversion) {
     constexpr auto x = IntervalRefined<int, 1, 100>(42);
-    constexpr PositiveInt p = x;
+    constexpr PositiveI32 p = x;
     static_assert(p.get() == 42);
 }
 
@@ -1054,15 +1056,15 @@ TEST(Implication, InvalidConversionDoesNotCompile) {
 // ---- Float operator return type tests ----
 
 TEST(Operations, FloatArithmeticUnchanged) {
-    PositiveDouble a{5.0, runtime_check};
-    PositiveDouble b{3.0, runtime_check};
+    PositiveF64 a{5.0, runtime_check};
+    PositiveF64 b{3.0, runtime_check};
 
     auto sum = a + b;
-    static_assert(std::same_as<decltype(sum), PositiveDouble>);
+    static_assert(std::same_as<decltype(sum), PositiveF64>);
     EXPECT_DOUBLE_EQ(sum.get(), 8.0);
 
     auto prod = a * b;
-    static_assert(std::same_as<decltype(prod), PositiveDouble>);
+    static_assert(std::same_as<decltype(prod), PositiveF64>);
     EXPECT_DOUBLE_EQ(prod.get(), 15.0);
 
     // Subtraction of floats with Positive predicate — result might not be
