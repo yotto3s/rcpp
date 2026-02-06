@@ -43,7 +43,7 @@ private:
 public:
     template<typename T>
     explicit refinement_error(const T& value, std::string_view pred_name = "predicate")
-        : message_(std::format("Refinement violation: value does not satisfy {}", pred_name))
+        : message_(std::format("Refinement violation: {} does not satisfy {}", value, pred_name))
     {}
 
     explicit refinement_error(std::string msg)

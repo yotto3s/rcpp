@@ -4,6 +4,9 @@
 #include <rcpp/refine.hpp>
 #include <iostream>
 #include <cassert>
+#include <cmath>
+#include <limits>
+#include <numbers>
 
 using namespace refine;
 
@@ -293,6 +296,205 @@ void test_is_valid() {
     std::cout << "All is_valid tests passed\n";
 }
 
+// Test float predicates
+void test_float_predicates() {
+    // NotNaN
+    static_assert(NotNaN(1.0));
+    static_assert(NotNaN(0.0));
+    static_assert(NotNaN(-1.0));
+    assert(!NotNaN(std::numeric_limits<double>::quiet_NaN()));
+
+    // IsNaN
+    assert(IsNaN(std::numeric_limits<double>::quiet_NaN()));
+    assert(IsNaN(std::numeric_limits<float>::quiet_NaN()));
+    static_assert(!IsNaN(1.0));
+    static_assert(!IsNaN(0.0));
+
+    // Finite
+    static_assert(Finite(1.0));
+    static_assert(Finite(0.0));
+    static_assert(Finite(-1.0));
+    assert(!Finite(std::numeric_limits<double>::infinity()));
+    assert(!Finite(-std::numeric_limits<double>::infinity()));
+    assert(!Finite(std::numeric_limits<double>::quiet_NaN()));
+
+    // IsInf
+    assert(IsInf(std::numeric_limits<double>::infinity()));
+    assert(IsInf(-std::numeric_limits<double>::infinity()));
+    static_assert(!IsInf(1.0));
+    static_assert(!IsInf(0.0));
+    assert(!IsInf(std::numeric_limits<double>::quiet_NaN()));
+
+    // IsNormal
+    static_assert(IsNormal(1.0));
+    static_assert(IsNormal(-1.0));
+    static_assert(!IsNormal(0.0));
+
+    // ApproxEqual
+    constexpr auto near_zero = ApproxEqual(0.0, 0.001);
+    static_assert(near_zero(0.0));
+    static_assert(near_zero(0.0005));
+    static_assert(near_zero(-0.0005));
+    static_assert(!near_zero(0.01));
+    static_assert(!near_zero(-0.01));
+
+    constexpr auto near_pi = ApproxEqual(3.14159, 0.01);
+    static_assert(near_pi(3.14));
+    static_assert(!near_pi(3.0));
+
+    std::cout << "All float predicate tests passed\n";
+}
+
+// Test compile-time construction of float refined types
+consteval double test_float_compile_time() {
+    PositiveDouble pd{3.14};
+    FiniteDouble fd{2.718};
+    NormalizedDouble nd{0.5};
+    UnitDouble ud{0.75};
+
+    if (pd.get() != 3.14) throw "pd should be 3.14";
+    if (fd.get() != 2.718) throw "fd should be 2.718";
+    if (nd.get() != 0.5) throw "nd should be 0.5";
+    if (ud.get() != 0.75) throw "ud should be 0.75";
+
+    return pd.get();
+}
+
+// Test runtime construction with float values
+void test_float_runtime_construction() {
+    // Valid constructions
+    FiniteDouble fd{1.5, runtime_check};
+    assert(fd.get() == 1.5);
+
+    NormalizedDouble nd{-0.5, runtime_check};
+    assert(nd.get() == -0.5);
+
+    UnitDouble ud{0.5, runtime_check};
+    assert(ud.get() == 0.5);
+
+    // Invalid: NaN for Finite
+    try {
+        FiniteDouble bad{std::numeric_limits<double>::quiet_NaN(), runtime_check};
+        assert(false && "Should have thrown");
+    } catch (const refinement_error& e) {
+        std::cout << "Expected Finite NaN error: " << e.what() << "\n";
+    }
+
+    // Invalid: infinity for Finite
+    try {
+        FiniteDouble bad{std::numeric_limits<double>::infinity(), runtime_check};
+        assert(false && "Should have thrown");
+    } catch (const refinement_error& e) {
+        std::cout << "Expected Finite Inf error: " << e.what() << "\n";
+    }
+
+    // Invalid: 2.0 for Normalized (must be in [-1, 1])
+    try {
+        NormalizedDouble bad{2.0, runtime_check};
+        assert(false && "Should have thrown");
+    } catch (const refinement_error& e) {
+        std::cout << "Expected Normalized error: " << e.what() << "\n";
+    }
+
+    // Invalid: -0.1 for UnitDouble (must be in [0, 1])
+    try {
+        UnitDouble bad{-0.1, runtime_check};
+        assert(false && "Should have thrown");
+    } catch (const refinement_error& e) {
+        std::cout << "Expected Unit error: " << e.what() << "\n";
+    }
+
+    std::cout << "All float runtime construction tests passed\n";
+}
+
+// Test safe math operations
+void test_float_operations() {
+    // safe_sqrt with NonNegative
+    NonNegativeDouble nn{4.0, runtime_check};
+    auto sqrt_nn = refine::safe_sqrt(nn);
+    assert(std::abs(sqrt_nn.get() - 2.0) < 1e-10);
+    assert(NonNegative(sqrt_nn.get()));
+
+    // safe_sqrt with Positive
+    PositiveDouble pd{9.0, runtime_check};
+    auto sqrt_pd = refine::safe_sqrt(pd);
+    assert(std::abs(sqrt_pd.get() - 3.0) < 1e-10);
+    assert(Positive(sqrt_pd.get()));
+
+    // safe_sqrt of zero
+    NonNegativeDouble zero{0.0, runtime_check};
+    auto sqrt_zero = refine::safe_sqrt(zero);
+    assert(sqrt_zero.get() == 0.0);
+
+    // safe_log
+    PositiveDouble e_val{std::numbers::e, runtime_check};
+    double log_e = refine::safe_log(e_val);
+    assert(std::abs(log_e - 1.0) < 1e-10);
+
+    PositiveDouble one{1.0, runtime_check};
+    double log_one = refine::safe_log(one);
+    assert(std::abs(log_one) < 1e-10);
+
+    // safe_asin
+    NormalizedDouble half{0.5, runtime_check};
+    double asin_half = refine::safe_asin(half);
+    assert(std::abs(asin_half - std::asin(0.5)) < 1e-10);
+
+    // safe_acos
+    double acos_half = refine::safe_acos(half);
+    assert(std::abs(acos_half - std::acos(0.5)) < 1e-10);
+
+    // safe_reciprocal
+    NonZeroDouble nz{4.0, runtime_check};
+    double recip = refine::safe_reciprocal(nz);
+    assert(std::abs(recip - 0.25) < 1e-10);
+
+    NonZeroDouble neg_nz{-2.0, runtime_check};
+    double recip_neg = refine::safe_reciprocal(neg_nz);
+    assert(std::abs(recip_neg - (-0.5)) < 1e-10);
+
+    std::cout << "All float operation tests passed\n";
+}
+
+// Test float edge cases
+void test_float_edge_cases() {
+    // Negative zero is still zero, so NonNegative and Finite should accept it
+    double neg_zero = -0.0;
+    assert(NonNegative(neg_zero));  // -0.0 >= 0.0 is true
+    assert(Finite(neg_zero));
+
+    // Largest finite value
+    constexpr double max_val = std::numeric_limits<double>::max();
+    static_assert(Finite(max_val));
+    static_assert(Positive(max_val));
+
+    // Smallest normal value
+    constexpr double min_normal = std::numeric_limits<double>::min();
+    static_assert(Positive(min_normal));
+    static_assert(IsNormal(min_normal));
+
+    // Denormalized value
+    constexpr double denorm = std::numeric_limits<double>::denorm_min();
+    static_assert(Positive(denorm));
+    static_assert(Finite(denorm));
+    static_assert(!IsNormal(denorm));  // Denormals are not normal
+
+    // Float vs double
+    static_assert(Finite(1.0f));
+    static_assert(Finite(1.0));
+    assert(!Finite(std::numeric_limits<float>::infinity()));
+    assert(!Finite(std::numeric_limits<double>::infinity()));
+
+    // Float type aliases work
+    FiniteFloat ff{1.5f, runtime_check};
+    assert(ff.get() == 1.5f);
+
+    NormalizedFloat nf{-0.5f, runtime_check};
+    assert(nf.get() == -0.5f);
+
+    std::cout << "All float edge case tests passed\n";
+}
+
 int main() {
     std::cout << "=== C++26 Refinement Types Test Suite ===\n\n";
 
@@ -300,6 +502,11 @@ int main() {
     constexpr int ct_result = test_compile_time_construction();
     static_assert(ct_result == 43);
     std::cout << "Compile-time construction: passed\n";
+
+    // Compile-time float test
+    constexpr double ct_float_result = test_float_compile_time();
+    static_assert(ct_float_result == 3.14);
+    std::cout << "Compile-time float construction: passed\n";
 
     // Runtime tests
     test_runtime_construction();
@@ -314,6 +521,10 @@ int main() {
     test_sqrt_example();
     test_comparisons();
     test_is_valid();
+    test_float_predicates();
+    test_float_runtime_construction();
+    test_float_operations();
+    test_float_edge_cases();
 
     std::cout << "\n=== All tests passed! ===\n";
     return 0;

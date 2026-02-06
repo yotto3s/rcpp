@@ -7,6 +7,8 @@
 #include <concepts>
 #include <type_traits>
 #include <cstddef>
+#include <cmath>
+#include <limits>
 #include <string>
 #include <string_view>
 
@@ -151,12 +153,39 @@ inline constexpr auto PowerOfTwo = [](auto v) constexpr {
 
 // Floating point predicates
 inline constexpr auto Finite = [](auto v) constexpr {
-    // Note: std::isfinite may not be constexpr in all implementations
-    return v == v && v != v + 1; // Simple check: not NaN and not infinite
+    using T = decltype(v);
+    return v == v  // not NaN
+        && v != std::numeric_limits<T>::infinity()
+        && v != -std::numeric_limits<T>::infinity();
 };
 
 inline constexpr auto Normalized = [](auto v) constexpr {
     return v >= decltype(v){-1} && v <= decltype(v){1};
+};
+
+inline constexpr auto NotNaN = [](auto v) constexpr {
+    return v == v;
+};
+
+inline constexpr auto IsNaN = [](auto v) constexpr {
+    return v != v;
+};
+
+inline constexpr auto IsInf = [](auto v) constexpr {
+    using T = decltype(v);
+    return v == std::numeric_limits<T>::infinity()
+        || v == -std::numeric_limits<T>::infinity();
+};
+
+inline constexpr auto IsNormal = [](auto v) constexpr {
+    return std::isnormal(v);
+};
+
+inline constexpr auto ApproxEqual = [](auto target, auto epsilon) constexpr {
+    return [=](auto v) constexpr {
+        auto diff = v - target;
+        return (diff < 0 ? -diff : diff) <= epsilon;
+    };
 };
 
 // Always true/false predicates (useful for testing)

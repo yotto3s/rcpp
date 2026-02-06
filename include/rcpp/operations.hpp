@@ -7,6 +7,7 @@
 #include <concepts>
 #include <type_traits>
 #include <optional>
+#include <cmath>
 
 #include "refined.hpp"
 #include "predicates.hpp"
@@ -251,6 +252,48 @@ template<typename T>
 template<typename T, auto Pred>
 [[nodiscard]] constexpr Refined<T, NonNegative> square(const Refined<T, Pred>& refined) {
     return square(refined.get());
+}
+
+// Safe sqrt for non-negative floats (preserves NonNegative)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr Refined<T, NonNegative> safe_sqrt(Refined<T, NonNegative> value) {
+    return Refined<T, NonNegative>(std::sqrt(value.get()), assume_valid);
+}
+
+// Safe sqrt for positive floats (preserves Positive)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr Refined<T, Positive> safe_sqrt(Refined<T, Positive> value) {
+    return Refined<T, Positive>(std::sqrt(value.get()), assume_valid);
+}
+
+// Safe log for positive floats (result can be negative, so returns plain T)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr T safe_log(Refined<T, Positive> value) {
+    return std::log(value.get());
+}
+
+// Safe asin for normalized floats [-1, 1] (returns plain T)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr T safe_asin(Refined<T, Normalized> value) {
+    return std::asin(value.get());
+}
+
+// Safe acos for normalized floats [-1, 1] (returns plain T)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr T safe_acos(Refined<T, Normalized> value) {
+    return std::acos(value.get());
+}
+
+// Safe reciprocal for non-zero floats (returns plain T)
+template<typename T>
+    requires std::floating_point<T>
+[[nodiscard]] constexpr T safe_reciprocal(Refined<T, NonZero> value) {
+    return T{1} / value.get();
 }
 
 } // namespace refine

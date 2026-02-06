@@ -81,6 +81,19 @@ inline constexpr auto IsProbability = [](double v) constexpr {
 };
 using Probability = Refined<double, IsProbability>;
 
+// Finite floating point
+using FiniteFloat = Refined<float, Finite>;
+using FiniteDouble = Refined<double, Finite>;
+
+// Normalized floating point [-1, 1]
+using NormalizedFloat = Refined<float, Normalized>;
+using NormalizedDouble = Refined<double, Normalized>;
+
+// Unit interval [0, 1]
+inline constexpr auto IsUnit = InRange(0.0, 1.0);
+using UnitFloat = Refined<float, IsUnit>;
+using UnitDouble = Refined<double, IsUnit>;
+
 // Byte value (0-255)
 inline constexpr auto IsByte = InRange(0, 255);
 using ByteValue = Refined<int, IsByte>;

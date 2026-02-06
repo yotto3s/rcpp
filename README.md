@@ -8,8 +8,10 @@ A header-only library providing Liquid Haskell-style refinement types for C++26,
 - **Runtime verification**: Optional runtime checking with `runtime_check` tag
 - **Reflection-powered diagnostics**: Compile-time error messages include the actual violating value via C++26 reflection
 - **Standard predicates**: `Positive`, `NonZero`, `NonNegative`, `InRange`, `Even`, `Odd`, etc.
+- **Float predicates**: `Finite`, `NotNaN`, `IsNaN`, `IsInf`, `IsNormal`, `ApproxEqual`
 - **Predicate composition**: `All<P1,P2>`, `Any<P1,P2>`, `Not<P>`, `If<P1,P2>`, etc.
-- **Type-safe operations**: `safe_divide`, `abs`, `square`, `refined_min/max`
+- **Type-safe operations**: `safe_divide`, `safe_sqrt`, `safe_log`, `safe_asin`, `safe_acos`, `safe_reciprocal`, `abs`, `square`, `refined_min/max`
+- **Float type aliases**: `FiniteDouble`, `NormalizedDouble`, `UnitDouble`, etc.
 
 ## Requirements
 
@@ -51,6 +53,11 @@ template<typename T>
 T safe_divide(T num, Refined<T, NonZero> denom) {
     return num / denom.get();  // Can never divide by zero!
 }
+
+// Safe math on floats
+PositiveDouble pd{9.0, runtime_check};
+auto root = safe_sqrt(pd);   // Returns Refined<double, Positive>
+double lg = safe_log(pd);    // Returns double (log can be negative)
 ```
 
 ## Building
