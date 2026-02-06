@@ -47,23 +47,31 @@ namespace refinery {
 
 // Positive integers (> 0) — interval-based for arithmetic ergonomics
 using PositiveInt = IntervalRefined<int, 1, std::numeric_limits<int>::max()>;
-using PositiveLong = IntervalRefined<long, 1L, std::numeric_limits<long>::max()>;
-using PositiveLongLong = IntervalRefined<long long, 1LL, std::numeric_limits<long long>::max()>;
+using PositiveLong =
+    IntervalRefined<long, 1L, std::numeric_limits<long>::max()>;
+using PositiveLongLong =
+    IntervalRefined<long long, 1LL, std::numeric_limits<long long>::max()>;
 
 // Negative integers (< 0) — interval-based
 using NegativeInt = IntervalRefined<int, std::numeric_limits<int>::min(), -1>;
-using NegativeLong = IntervalRefined<long, std::numeric_limits<long>::min(), -1L>;
-using NegativeLongLong = IntervalRefined<long long, std::numeric_limits<long long>::min(), -1LL>;
+using NegativeLong =
+    IntervalRefined<long, std::numeric_limits<long>::min(), -1L>;
+using NegativeLongLong =
+    IntervalRefined<long long, std::numeric_limits<long long>::min(), -1LL>;
 
 // Non-negative integers (>= 0) — interval-based
 using NonNegativeInt = IntervalRefined<int, 0, std::numeric_limits<int>::max()>;
-using NonNegativeLong = IntervalRefined<long, 0L, std::numeric_limits<long>::max()>;
-using NonNegativeLongLong = IntervalRefined<long long, 0LL, std::numeric_limits<long long>::max()>;
+using NonNegativeLong =
+    IntervalRefined<long, 0L, std::numeric_limits<long>::max()>;
+using NonNegativeLongLong =
+    IntervalRefined<long long, 0LL, std::numeric_limits<long long>::max()>;
 
 // Non-positive integers (<= 0) — interval-based
 using NonPositiveInt = IntervalRefined<int, std::numeric_limits<int>::min(), 0>;
-using NonPositiveLong = IntervalRefined<long, std::numeric_limits<long>::min(), 0L>;
-using NonPositiveLongLong = IntervalRefined<long long, std::numeric_limits<long long>::min(), 0LL>;
+using NonPositiveLong =
+    IntervalRefined<long, std::numeric_limits<long>::min(), 0L>;
+using NonPositiveLongLong =
+    IntervalRefined<long long, std::numeric_limits<long long>::min(), 0LL>;
 
 // Non-zero integers (!= 0) — predicate-based (cannot be a single interval).
 // Arithmetic on NonZero types returns plain T, not interval-refined results.

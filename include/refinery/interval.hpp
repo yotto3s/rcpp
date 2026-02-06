@@ -58,8 +58,7 @@ template <auto A, auto B, auto C, auto D> consteval auto max4() {
 
 // Saturating arithmetic for compile-time interval bound computation.
 // Clamps to numeric limits instead of overflowing.
-template <typename T>
-consteval T sat_add(T a, T b) {
+template <typename T> consteval T sat_add(T a, T b) {
     if constexpr (std::integral<T>) {
         if (b > 0 && a > std::numeric_limits<T>::max() - b)
             return std::numeric_limits<T>::max();
@@ -67,14 +66,15 @@ consteval T sat_add(T a, T b) {
             return std::numeric_limits<T>::min();
     } else if constexpr (std::floating_point<T>) {
         constexpr auto mx = std::numeric_limits<T>::max();
-        if ((a > 0 && b > 0) && (a > mx - b)) return std::numeric_limits<T>::infinity();
-        if ((a < 0 && b < 0) && (a < -mx - b)) return -std::numeric_limits<T>::infinity();
+        if ((a > 0 && b > 0) && (a > mx - b))
+            return std::numeric_limits<T>::infinity();
+        if ((a < 0 && b < 0) && (a < -mx - b))
+            return -std::numeric_limits<T>::infinity();
     }
     return a + b;
 }
 
-template <typename T>
-consteval T sat_sub(T a, T b) {
+template <typename T> consteval T sat_sub(T a, T b) {
     if constexpr (std::integral<T>) {
         if (b < 0 && a > std::numeric_limits<T>::max() + b)
             return std::numeric_limits<T>::max();
@@ -82,15 +82,17 @@ consteval T sat_sub(T a, T b) {
             return std::numeric_limits<T>::min();
     } else if constexpr (std::floating_point<T>) {
         constexpr auto mx = std::numeric_limits<T>::max();
-        if ((a > 0 && b < 0) && (a > mx + b)) return std::numeric_limits<T>::infinity();
-        if ((a < 0 && b > 0) && (a < -mx + b)) return -std::numeric_limits<T>::infinity();
+        if ((a > 0 && b < 0) && (a > mx + b))
+            return std::numeric_limits<T>::infinity();
+        if ((a < 0 && b > 0) && (a < -mx + b))
+            return -std::numeric_limits<T>::infinity();
     }
     return a - b;
 }
 
-template <typename T>
-consteval T sat_mul(T a, T b) {
-    if (a == T{0} || b == T{0}) return T{0};
+template <typename T> consteval T sat_mul(T a, T b) {
+    if (a == T{0} || b == T{0})
+        return T{0};
     if constexpr (std::integral<T>) {
         if (a > 0) {
             if (b > 0) {
@@ -115,7 +117,8 @@ consteval T sat_mul(T a, T b) {
         auto abs_b = b < T{0} ? -b : b;
         if (abs_a > mx / abs_b) {
             bool neg = (a < T{0}) != (b < T{0});
-            return neg ? -std::numeric_limits<T>::infinity() : std::numeric_limits<T>::infinity();
+            return neg ? -std::numeric_limits<T>::infinity()
+                       : std::numeric_limits<T>::infinity();
         }
     }
     return a * b;
@@ -123,8 +126,7 @@ consteval T sat_mul(T a, T b) {
 
 // Conservative: sat_neg(INT_MIN) returns INT_MAX (true |INT_MIN| is INT_MAX+1).
 // This widens the result interval by 1 — a safe over-approximation.
-template <typename T>
-consteval T sat_neg(T a) {
+template <typename T> consteval T sat_neg(T a) {
     if constexpr (std::integral<T>) {
         if (a == std::numeric_limits<T>::min())
             return std::numeric_limits<T>::max();
@@ -202,7 +204,8 @@ constexpr T checked_sub(T a, T b) {
 template <typename T>
     requires std::integral<T>
 constexpr T checked_mul(T a, T b) {
-    if (a == 0 || b == 0) return T{0};
+    if (a == 0 || b == 0)
+        return T{0};
     if (a > 0) {
         if (b > 0) {
             if (a > std::numeric_limits<T>::max() / b)
@@ -236,8 +239,7 @@ constexpr T checked_neg(T a) {
 // An interval is "trivially wide" when it spans more than half the
 // representable range — carrying almost no useful refinement information.
 // In that case, arithmetic operators degrade the result to plain T.
-template <typename T, auto Pred>
-consteval bool is_trivially_wide() {
+template <typename T, auto Pred> consteval bool is_trivially_wide() {
     if constexpr (!interval_predicate<Pred>) {
         return false;
     } else if constexpr (std::integral<T>) {
@@ -273,7 +275,8 @@ template <typename T, auto P1, auto P2>
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::add_intervals<P1, P2>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_add(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_add(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() + rhs.get());
 }
@@ -285,7 +288,8 @@ template <typename T, auto P1, auto P2>
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::sub_intervals<P1, P2>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_sub(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_sub(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() - rhs.get());
 }
@@ -297,7 +301,8 @@ template <typename T, auto P1, auto P2>
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::mul_intervals<P1, P2>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_mul(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_mul(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() * rhs.get());
 }
@@ -308,7 +313,8 @@ template <typename T, auto P>
 [[nodiscard]] constexpr auto operator-(const Refined<T, P>& val) {
     constexpr auto result_pred = interval_math::negate_interval<P>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_neg(val.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_neg(val.get()));
     else
         return detail::make_interval_result<result_pred>(-val.get());
 }
@@ -323,7 +329,8 @@ template <typename T, auto P>
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::add_intervals<P, P>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_add(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_add(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() + rhs.get());
 }
@@ -334,7 +341,8 @@ template <typename T, auto P>
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::sub_intervals<P, P>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_sub(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_sub(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() - rhs.get());
 }
@@ -345,7 +353,8 @@ template <typename T, auto P>
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::mul_intervals<P, P>();
     if constexpr (std::integral<T>)
-        return detail::make_interval_result<result_pred>(detail::checked_mul(lhs.get(), rhs.get()));
+        return detail::make_interval_result<result_pred>(
+            detail::checked_mul(lhs.get(), rhs.get()));
     else
         return detail::make_interval_result<result_pred>(lhs.get() * rhs.get());
 }

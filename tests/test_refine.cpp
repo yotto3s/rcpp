@@ -763,8 +763,10 @@ TEST(CheckedArith, AddNoOverflow) {
 
 TEST(CheckedArith, AddOverflow) {
     using refinery::detail::checked_add;
-    EXPECT_THROW(checked_add(std::numeric_limits<int>::max(), 1), refinement_error);
-    EXPECT_THROW(checked_add(std::numeric_limits<int>::min(), -1), refinement_error);
+    EXPECT_THROW(checked_add(std::numeric_limits<int>::max(), 1),
+                 refinement_error);
+    EXPECT_THROW(checked_add(std::numeric_limits<int>::min(), -1),
+                 refinement_error);
 }
 
 TEST(CheckedArith, SubNoOverflow) {
@@ -775,8 +777,10 @@ TEST(CheckedArith, SubNoOverflow) {
 
 TEST(CheckedArith, SubOverflow) {
     using refinery::detail::checked_sub;
-    EXPECT_THROW(checked_sub(std::numeric_limits<int>::min(), 1), refinement_error);
-    EXPECT_THROW(checked_sub(std::numeric_limits<int>::max(), -1), refinement_error);
+    EXPECT_THROW(checked_sub(std::numeric_limits<int>::min(), 1),
+                 refinement_error);
+    EXPECT_THROW(checked_sub(std::numeric_limits<int>::max(), -1),
+                 refinement_error);
 }
 
 TEST(CheckedArith, MulNoOverflow) {
@@ -788,11 +792,15 @@ TEST(CheckedArith, MulNoOverflow) {
 
 TEST(CheckedArith, MulOverflow) {
     using refinery::detail::checked_mul;
-    EXPECT_THROW(checked_mul(std::numeric_limits<int>::max(), 2), refinement_error);
-    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), 2), refinement_error);
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::max(), 2),
+                 refinement_error);
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), 2),
+                 refinement_error);
     // INT_MIN * -1 overflows (|INT_MIN| > INT_MAX)
-    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), -1), refinement_error);
-    EXPECT_THROW(checked_mul(-1, std::numeric_limits<int>::min()), refinement_error);
+    EXPECT_THROW(checked_mul(std::numeric_limits<int>::min(), -1),
+                 refinement_error);
+    EXPECT_THROW(checked_mul(-1, std::numeric_limits<int>::min()),
+                 refinement_error);
 }
 
 TEST(CheckedArith, NegNoOverflow) {
@@ -804,7 +812,8 @@ TEST(CheckedArith, NegNoOverflow) {
 
 TEST(CheckedArith, NegOverflow) {
     using refinery::detail::checked_neg;
-    EXPECT_THROW(checked_neg(std::numeric_limits<int>::min()), refinement_error);
+    EXPECT_THROW(checked_neg(std::numeric_limits<int>::min()),
+                 refinement_error);
 }
 
 TEST(SaturatingArith, EdgeCases) {
@@ -878,7 +887,8 @@ TEST(Interval, FloatNoThrow) {
 TEST(IntervalAliases, PositiveIntIsInterval) {
     static_assert(interval_predicate<PositiveInt::predicate>);
     static_assert(decltype(PositiveInt::predicate)::lo == 1);
-    static_assert(decltype(PositiveInt::predicate)::hi == std::numeric_limits<int>::max());
+    static_assert(decltype(PositiveInt::predicate)::hi ==
+                  std::numeric_limits<int>::max());
 
     constexpr PositiveInt p{42};
     static_assert(p.get() == 42);
@@ -892,7 +902,8 @@ TEST(IntervalAliases, PositiveIntIsInterval) {
 TEST(IntervalAliases, NonNegativeIntIsInterval) {
     static_assert(interval_predicate<NonNegativeInt::predicate>);
     static_assert(decltype(NonNegativeInt::predicate)::lo == 0);
-    static_assert(decltype(NonNegativeInt::predicate)::hi == std::numeric_limits<int>::max());
+    static_assert(decltype(NonNegativeInt::predicate)::hi ==
+                  std::numeric_limits<int>::max());
 
     constexpr NonNegativeInt z{0};
     static_assert(z.get() == 0);
@@ -939,7 +950,8 @@ TEST(IntervalAliases, SubtractionReturnsDegradedType) {
 
 TEST(IntervalAliases, NegativeIntIsInterval) {
     static_assert(interval_predicate<NegativeInt::predicate>);
-    static_assert(decltype(NegativeInt::predicate)::lo == std::numeric_limits<int>::min());
+    static_assert(decltype(NegativeInt::predicate)::lo ==
+                  std::numeric_limits<int>::min());
     static_assert(decltype(NegativeInt::predicate)::hi == -1);
 
     constexpr NegativeInt n{-42};
@@ -953,7 +965,8 @@ TEST(IntervalAliases, NegativeIntIsInterval) {
 
 TEST(IntervalAliases, NonPositiveIntIsInterval) {
     static_assert(interval_predicate<NonPositiveInt::predicate>);
-    static_assert(decltype(NonPositiveInt::predicate)::lo == std::numeric_limits<int>::min());
+    static_assert(decltype(NonPositiveInt::predicate)::lo ==
+                  std::numeric_limits<int>::min());
     static_assert(decltype(NonPositiveInt::predicate)::hi == 0);
 
     constexpr NonPositiveInt z{0};
@@ -1033,7 +1046,9 @@ TEST(Implication, CompileTimeConversion) {
 
 TEST(Implication, InvalidConversionDoesNotCompile) {
     // [0, 100] does NOT imply Interval<1, INT_MAX> (0 < 1)
-    static_assert(!detail::predicate_implies<int, Interval<0, 100>{}, Interval<1, std::numeric_limits<int>::max()>{}>());
+    static_assert(!detail::predicate_implies<
+                  int, Interval<0, 100>{},
+                  Interval<1, std::numeric_limits<int>::max()>{}>());
 }
 
 // ---- Float operator return type tests ----
@@ -1050,8 +1065,8 @@ TEST(Operations, FloatArithmeticUnchanged) {
     static_assert(std::same_as<decltype(prod), PositiveDouble>);
     EXPECT_DOUBLE_EQ(prod.get(), 15.0);
 
-    // Subtraction of floats with Positive predicate — result might not be positive
-    // This now returns plain double (not optional)
+    // Subtraction of floats with Positive predicate — result might not be
+    // positive This now returns plain double (not optional)
     auto diff = a - b;
     static_assert(std::same_as<decltype(diff), double>);
     EXPECT_DOUBLE_EQ(diff, 2.0);

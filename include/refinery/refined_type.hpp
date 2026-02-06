@@ -123,10 +123,10 @@ class Refined {
     // Only participates in overload resolution when OtherPred provably
     // implies Predicate (checked at compile time).
     template <auto OtherPred>
-        requires (!std::same_as<decltype(OtherPred), decltype(Predicate)> ||
-                  OtherPred != Predicate) &&
-                 predicate_for<decltype(OtherPred), T> &&
-                 (detail::predicate_implies<T, OtherPred, Predicate>())
+        requires(!std::same_as<decltype(OtherPred), decltype(Predicate)> ||
+                 OtherPred != Predicate) &&
+                predicate_for<decltype(OtherPred), T> &&
+                (detail::predicate_implies<T, OtherPred, Predicate>())
     constexpr Refined(const Refined<T, OtherPred>& other) noexcept
         : value_(other.get()) {}
 

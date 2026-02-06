@@ -89,8 +89,8 @@ template <typename T, auto Pred>
 // Subtraction (rarely preserves predicates, returns plain T)
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
-[[nodiscard]] constexpr T
-operator-(const Refined<T, Pred>& lhs, const Refined<T, Pred>& rhs) {
+[[nodiscard]] constexpr T operator-(const Refined<T, Pred>& lhs,
+                                    const Refined<T, Pred>& rhs) {
     return lhs.get() - rhs.get();
 }
 
@@ -127,8 +127,7 @@ template <typename T, auto NumPred, auto DivPred>
 // Unary negation (returns plain T for non-interval predicates)
 template <typename T, auto Pred>
     requires(!detail::has_interval_bounds<Pred>)
-[[nodiscard]] constexpr T
-operator-(const Refined<T, Pred>& val) {
+[[nodiscard]] constexpr T operator-(const Refined<T, Pred>& val) {
     return -val.get();
 }
 
