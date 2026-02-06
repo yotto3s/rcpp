@@ -10,6 +10,7 @@ A header-only library providing Liquid Haskell-style refinement types for C++26,
 - **Standard predicates**: `Positive`, `NonZero`, `NonNegative`, `InRange`, `Even`, `Odd`, etc.
 - **Float predicates**: `Finite`, `NotNaN`, `IsNaN`, `IsInf`, `IsNormal`, `ApproxEqual`
 - **Predicate composition**: `All<P1,P2>`, `Any<P1,P2>`, `Not<P>`, `If<P1,P2>`, etc.
+- **Interval arithmetic**: `Interval<Lo, Hi>` structural predicates with compile-time arithmetic — `[1,10] + [1,10]` automatically yields `[2,20]`
 - **Type-safe operations**: `safe_divide`, `safe_sqrt`, `safe_log`, `safe_asin`, `safe_acos`, `safe_reciprocal`, `abs`, `square`, `refined_min/max`
 - **Float type aliases**: `FiniteDouble`, `NormalizedDouble`, `UnitDouble`, etc.
 - **Zero runtime overhead**: Assembly-verified — `Refined<T>` produces identical machine code to raw `T` at `-O2`
@@ -60,6 +61,46 @@ PositiveDouble pd{9.0, runtime_check};
 auto root = safe_sqrt(pd);   // Returns Refined<double, Positive>
 double lg = safe_log(pd);    // Returns double (log can be negative)
 ```
+
+### Compile-Time Error Messages
+
+When a predicate fails at compile time, GCC's reflection produces a clear diagnostic:
+
+```
+error: 'consteval' call is not a constant expression
+note: explicitly thrown exception with message
+      "Refinement violation: -1 does not satisfy predicate"
+```
+
+## Interval Arithmetic
+
+`Interval<Lo, Hi>` is a structural predicate representing a closed range `[Lo, Hi]`. Arithmetic on interval-refined values computes the result bounds at compile time:
+
+```cpp
+using Score = IntervalRefined<int, 0, 100>;
+Score a{30, runtime_check};
+Score b{40, runtime_check};
+
+auto sum = a + b;  // type: Refined<int, Interval<0, 200>>
+auto neg = -a;     // type: Refined<int, Interval<-100, 0>>
+```
+
+Supported operations: addition, subtraction, multiplication, unary negation. All bound computation happens at compile time with zero runtime cost.
+
+## Factory & Utility Functions
+
+| Function | Returns | On failure |
+|----------|---------|------------|
+| `Refined<T,P>(val)` | `Refined<T,P>` | Compile error (consteval) |
+| `Refined<T,P>(val, runtime_check)` | `Refined<T,P>` | Throws `refinement_error` |
+| `Refined<T,P>(val, assume_valid)` | `Refined<T,P>` | UB if predicate fails |
+| `try_refine<RefinedT>(val)` | `optional<RefinedT>` | Returns `nullopt` |
+| `make_refined<Pred>(val)` | `Refined<T,Pred>` | Compile error (consteval) |
+| `make_refined_checked<Pred>(val)` | `Refined<T,Pred>` | Throws `refinement_error` |
+| `assume_refined<Pred>(val)` | `Refined<T,Pred>` | UB if predicate fails |
+| `refine_to<To>(from)` | `To` | Throws `refinement_error` |
+| `try_refine_to<To>(from)` | `optional<To>` | Returns `nullopt` |
+| `transform_refined<Pred>(refined, fn)` | `Refined<R,Pred>` | Throws `refinement_error` |
 
 ## Zero-Overhead Verification
 
