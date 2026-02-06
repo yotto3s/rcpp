@@ -222,6 +222,45 @@ constexpr T checked_mul(T a, T b) {
     return a * b;
 }
 
+template <typename T>
+    requires std::integral<T>
+constexpr T checked_neg(T a) {
+    if (a == std::numeric_limits<T>::min())
+        throw refinement_error("integer overflow in negation");
+    return -a;
+}
+
+} // namespace detail
+
+// An interval is "trivially wide" when it spans more than half the
+// representable range — carrying almost no useful refinement information.
+// In that case, arithmetic operators degrade the result to plain T.
+template <typename T, auto Pred>
+consteval bool is_trivially_wide() {
+    if constexpr (!interval_predicate<Pred>) {
+        return false;
+    } else if constexpr (std::integral<T>) {
+        using U = std::make_unsigned_t<T>;
+        constexpr U width = static_cast<U>(Pred.hi) - static_cast<U>(Pred.lo);
+        return width >= static_cast<U>(std::numeric_limits<T>::max());
+    } else {
+        return false; // floats: never degrade (inf is a valid float)
+    }
+}
+
+// Wraps a raw arithmetic result in Refined<T, result_pred> via assume_valid,
+// or degrades to plain T if the result interval is trivially wide.
+namespace detail {
+
+template <auto result_pred, typename T>
+[[nodiscard]] constexpr auto make_interval_result(T raw) {
+    if constexpr (is_trivially_wide<T, result_pred>()) {
+        return raw;
+    } else {
+        return Refined<T, result_pred>(raw, assume_valid);
+    }
+}
+
 } // namespace detail
 
 // Operator overloads for mixed-predicate interval arithmetic
@@ -232,11 +271,10 @@ template <typename T, auto P1, auto P2>
 [[nodiscard]] constexpr auto operator+(const Refined<T, P1>& lhs,
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::add_intervals<P1, P2>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_add(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() + rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_add(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() + rhs.get());
 }
 
 // Subtraction: Refined<T, I1> - Refined<T, I2> -> Refined<T, I1-I2>
@@ -245,11 +283,10 @@ template <typename T, auto P1, auto P2>
 [[nodiscard]] constexpr auto operator-(const Refined<T, P1>& lhs,
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::sub_intervals<P1, P2>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_sub(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() - rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_sub(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() - rhs.get());
 }
 
 // Multiplication: Refined<T, I1> * Refined<T, I2> -> Refined<T, I1*I2>
@@ -258,11 +295,10 @@ template <typename T, auto P1, auto P2>
 [[nodiscard]] constexpr auto operator*(const Refined<T, P1>& lhs,
                                        const Refined<T, P2>& rhs) {
     constexpr auto result_pred = interval_math::mul_intervals<P1, P2>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_mul(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() * rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_mul(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() * rhs.get());
 }
 
 // Unary negation: -Refined<T, I> -> Refined<T, -I>
@@ -270,11 +306,10 @@ template <typename T, auto P>
     requires interval_predicate<P>
 [[nodiscard]] constexpr auto operator-(const Refined<T, P>& val) {
     constexpr auto result_pred = interval_math::negate_interval<P>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_sub(T{0}, val.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(-val.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_neg(val.get()));
+    else
+        return detail::make_interval_result<result_pred>(-val.get());
 }
 
 // Same-predicate overloads: these are more constrained than the generic
@@ -286,11 +321,10 @@ template <typename T, auto P>
 [[nodiscard]] constexpr auto operator+(const Refined<T, P>& lhs,
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::add_intervals<P, P>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_add(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() + rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_add(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() + rhs.get());
 }
 
 template <typename T, auto P>
@@ -298,11 +332,10 @@ template <typename T, auto P>
 [[nodiscard]] constexpr auto operator-(const Refined<T, P>& lhs,
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::sub_intervals<P, P>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_sub(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() - rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_sub(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() - rhs.get());
 }
 
 template <typename T, auto P>
@@ -310,11 +343,10 @@ template <typename T, auto P>
 [[nodiscard]] constexpr auto operator*(const Refined<T, P>& lhs,
                                        const Refined<T, P>& rhs) {
     constexpr auto result_pred = interval_math::mul_intervals<P, P>();
-    if constexpr (std::integral<T>) {
-        return Refined<T, result_pred>(detail::checked_mul(lhs.get(), rhs.get()), assume_valid);
-    } else {
-        return Refined<T, result_pred>(lhs.get() * rhs.get(), assume_valid);
-    }
+    if constexpr (std::integral<T>)
+        return detail::make_interval_result<result_pred>(detail::checked_mul(lhs.get(), rhs.get()));
+    else
+        return detail::make_interval_result<result_pred>(lhs.get() * rhs.get());
 }
 
 // Convenience alias

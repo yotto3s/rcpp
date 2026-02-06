@@ -50,15 +50,9 @@ consteval bool predicate_implies() {
     if constexpr (has_interval_bounds<Source> && has_interval_bounds<Target>) {
         // Interval -> Interval: source must be a subset of target
         return Source.lo >= Target.lo && Source.hi <= Target.hi;
-    } else if constexpr (has_interval_bounds<Source>) {
-        // Interval -> Predicate: test both endpoints.
-        // NOTE: This is only sound for predicates whose true-set is a
-        // contiguous interval (e.g. Positive, NonZero, NonNegative).
-        // Non-contiguous predicates (Even, DivisibleBy, etc.) could pass
-        // the endpoint check while failing for interior values.
-        return Target(Source.lo) && Target(Source.hi);
     } else {
-        // Predicate -> Predicate: explicit trait
+        // Predicate -> Predicate (including Interval -> Predicate):
+        // requires explicit traits::implies specialization.
         return traits::implies<Source, Target>::value;
     }
 }

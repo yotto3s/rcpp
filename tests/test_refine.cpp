@@ -795,6 +795,18 @@ TEST(CheckedArith, MulOverflow) {
     EXPECT_THROW(checked_mul(-1, std::numeric_limits<int>::min()), refinement_error);
 }
 
+TEST(CheckedArith, NegNoOverflow) {
+    using refinery::detail::checked_neg;
+    EXPECT_EQ(checked_neg(5), -5);
+    EXPECT_EQ(checked_neg(-5), 5);
+    EXPECT_EQ(checked_neg(0), 0);
+}
+
+TEST(CheckedArith, NegOverflow) {
+    using refinery::detail::checked_neg;
+    EXPECT_THROW(checked_neg(std::numeric_limits<int>::min()), refinement_error);
+}
+
 TEST(SaturatingArith, EdgeCases) {
     using namespace refinery::interval_math::detail;
     constexpr auto imax = std::numeric_limits<int>::max();
@@ -904,13 +916,72 @@ TEST(IntervalAliases, NegationTransforms) {
     static_assert(decltype(neg)::predicate.hi == -1);
 }
 
-TEST(IntervalAliases, SubtractionReturnsRefined) {
+TEST(IntervalAliases, SubtractionReturnsDegradedType) {
     PositiveInt a{10, runtime_check};
     PositiveInt b{3, runtime_check};
 
+    // PositiveInt - PositiveInt has trivially-wide bounds, returns plain int
     auto diff = a - b;
-    EXPECT_EQ(diff.get(), 7);
-    static_assert(interval_predicate<decltype(diff)::predicate>);
+    static_assert(std::same_as<decltype(diff), int>);
+    EXPECT_EQ(diff, 7);
+
+    // Narrow intervals still return Refined
+    auto x = IntervalRefined<int, 1, 100>(50, runtime_check);
+    auto y = IntervalRefined<int, 1, 100>(20, runtime_check);
+    auto narrow_diff = x - y;
+    static_assert(interval_predicate<decltype(narrow_diff)::predicate>);
+    EXPECT_EQ(narrow_diff.get(), 30);
+}
+
+TEST(IntervalAliases, NegativeIntIsInterval) {
+    static_assert(interval_predicate<NegativeInt::predicate>);
+    static_assert(decltype(NegativeInt::predicate)::lo == std::numeric_limits<int>::min());
+    static_assert(decltype(NegativeInt::predicate)::hi == -1);
+
+    constexpr NegativeInt n{-42};
+    static_assert(n.get() == -42);
+
+    NegativeInt nr{-42, runtime_check};
+    EXPECT_EQ(nr.get(), -42);
+    EXPECT_THROW(NegativeInt(0, runtime_check), refinement_error);
+    EXPECT_THROW(NegativeInt(1, runtime_check), refinement_error);
+}
+
+TEST(IntervalAliases, NonPositiveIntIsInterval) {
+    static_assert(interval_predicate<NonPositiveInt::predicate>);
+    static_assert(decltype(NonPositiveInt::predicate)::lo == std::numeric_limits<int>::min());
+    static_assert(decltype(NonPositiveInt::predicate)::hi == 0);
+
+    constexpr NonPositiveInt z{0};
+    static_assert(z.get() == 0);
+
+    constexpr NonPositiveInt n{-1};
+    static_assert(n.get() == -1);
+    EXPECT_THROW(NonPositiveInt(1, runtime_check), refinement_error);
+}
+
+TEST(IntervalAliases, NegativeArithmetic) {
+    NegativeInt a{-5, runtime_check};
+    NegativeInt b{-3, runtime_check};
+
+    // NegativeInt + NegativeInt: [-2*INT_MAX, -2], useful bounds -> Refined
+    auto sum = a + b;
+    EXPECT_EQ(sum.get(), -8);
+    static_assert(interval_predicate<decltype(sum)::predicate>);
+    static_assert(decltype(sum)::predicate.hi == -2);
+
+    // Negation of NegativeInt gives PositiveInt-like bounds
+    auto neg = -a;
+    EXPECT_EQ(neg.get(), 5);
+    static_assert(interval_predicate<decltype(neg)::predicate>);
+    static_assert(decltype(neg)::predicate.lo == 1);
+}
+
+TEST(IntervalAliases, NegativeToNonPositiveConversion) {
+    // NegativeInt ([INT_MIN, -1]) is a subset of NonPositiveInt ([INT_MIN, 0])
+    NegativeInt n{-42, runtime_check};
+    NonPositiveInt np = n;
+    EXPECT_EQ(np.get(), -42);
 }
 
 // ---- Predicate Implication Tests ----
@@ -928,14 +999,6 @@ TEST(Implication, IntervalToInterval) {
     // [1, 100] should convert to NonNegativeInt (Interval<0, INT_MAX>)
     NonNegativeInt nn = x;
     EXPECT_EQ(nn.get(), 42);
-}
-
-TEST(Implication, IntervalToPredicate) {
-    auto x = IntervalRefined<int, 1, 100>(42, runtime_check);
-
-    // [1, 100] implies NonZero (NonZero(1) && NonZero(100))
-    Refined<int, NonZero> nz = x;
-    EXPECT_EQ(nz.get(), 42);
 }
 
 TEST(Implication, PredicateToPredicate) {

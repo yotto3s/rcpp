@@ -1,8 +1,9 @@
 // 05_checked_subtraction.cpp — Proves interval-based integer subtraction with
 // overflow checking matches hand-written checked subtraction equivalent
 //
-// PositiveInt - PositiveInt computes bounds at compile time and uses checked_sub
-// at runtime. The plain version does the same overflow check manually.
+// PositiveInt - PositiveInt has trivially-wide bounds, so the result degrades
+// to plain int. The runtime cost is just checked_sub. The plain version does
+// the same overflow check manually.
 //
 // Expected: refined_sub_positive and plain_sub_positive produce identical assembly.
 
@@ -12,7 +13,7 @@ using namespace refinery;
 
 __attribute__((noinline)) int
 refined_sub_positive(PositiveInt a, PositiveInt b) {
-    return (a - b).get();
+    return a - b;
 }
 
 __attribute__((noinline)) int
