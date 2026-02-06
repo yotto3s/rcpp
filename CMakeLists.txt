@@ -12,6 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # Options
 option(RCPP_BUILD_TESTS "Build test suite" ON)
+option(RCPP_BUILD_EXAMPLES "Build assembly comparison examples" OFF)
 option(RCPP_INSTALL "Generate install target" ON)
 
 # Create header-only library
@@ -41,6 +42,11 @@ if(RCPP_BUILD_TESTS)
     FetchContent_MakeAvailable(googletest)
 
     add_subdirectory(tests)
+endif()
+
+# Examples
+if(RCPP_BUILD_EXAMPLES)
+    add_subdirectory(examples)
 endif()
 
 # Installation

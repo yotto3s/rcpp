@@ -18,6 +18,10 @@ ctest --test-dir build --output-on-failure
 
 # Direct test execution
 ./build/tests/test_refine
+
+# Build and run zero-overhead assembly comparison examples
+cmake -B build ... -DRCPP_BUILD_EXAMPLES=ON
+cmake --build build --target asm-compare
 ```
 
 Requires GCC 16+ with C++26 reflection support. The `-freflection` flag is added automatically by CMake for GCC. The `xg++-toolchain.cmake` file handles `-B`, `-nostdinc++`, libstdc++ include/link paths for uninstalled GCC build trees.
@@ -53,3 +57,7 @@ refine.hpp  (main entry point, type aliases, convenience macros)
 ### Key Type Aliases (defined in `refine.hpp`)
 
 `PositiveInt`, `NonZeroInt`, `NonNegativeInt`, `PositiveDouble`, `NonZeroDouble`, `FiniteFloat`, `FiniteDouble`, `NormalizedFloat`, `NormalizedDouble`, `UnitFloat`, `UnitDouble`, `Percentage`, `Probability`, `ByteValue`, `PortNumber`, `Natural`, `Whole`, etc. Created via `DEFINE_REFINED_TYPE` and `DEFINE_PREDICATE` macros.
+
+### Zero-Overhead Examples (`examples/zero_overhead/`)
+
+8 example files with paired `refined_*` / `plain_*` `__attribute__((noinline))` functions that prove zero runtime overhead at `-O2`. Covers: value passthrough, addition, multiplication, safe_sqrt, parameter passing, comparison operators, safe_divide/safe_reciprocal, and multi-op chains. Built with `-DRCPP_BUILD_EXAMPLES=ON`. The `asm-compare` CMake target runs `scripts/compare_asm.sh` which uses `objdump -d` to extract, normalize (strip NOPs, alignment padding, RIP-relative offsets, branch target labels), and diff each pair.
