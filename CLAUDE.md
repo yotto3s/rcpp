@@ -43,7 +43,7 @@ refinery.hpp  (main entry point, type aliases)
   ├── refined_type.hpp  (core Refined<T, Predicate> template)
   ├── operations.hpp    (safe arithmetic with predicate preservation traits, safe float math)
   └── interval.hpp      (Interval<Lo,Hi> structural predicate, compile-time interval arithmetic)
-domain.hpp    (domain-specific aliases: Percentage, Probability, etc.)
+domain.hpp    (domain-specific template aliases: Percentage<T>, Probability<T>, etc.)
   └── refinery.hpp
 ```
 
@@ -62,7 +62,7 @@ domain.hpp    (domain-specific aliases: Percentage, Probability, etc.)
 
 ### Key Type Aliases (defined in `refinery.hpp`)
 
-`PositiveI32`, `NonZeroI32`, `NonNegativeI32`, `PositiveI64`, `NonZeroI64`, `NonZeroU32`, `NonZeroU64`, `NonZeroUsize`, `PositiveF64`, `NonZeroF64`, `FiniteF32`, `FiniteF64`, `NormalizedF32`, `NormalizedF64`, etc. Domain aliases (`Percentage`, `Probability`, `UnitFloat`, `UnitDouble`, `ByteValue`, `PortNumber`, `Natural`, `Whole`) are in `domain.hpp`.
+`PositiveI32`, `NonZeroI32`, `NonNegativeI32`, `PositiveI64`, `NonZeroI64`, `NonZeroU32`, `NonZeroU64`, `NonZeroUsize`, `PositiveF64`, `NonZeroF64`, `FiniteF32`, `FiniteF64`, `NormalizedF32`, `NormalizedF64`, etc. Domain template aliases (`Percentage<T>`, `Probability<T>`, `UnitFloat<T>`, `UnitDouble<T>`, `ByteValue<T>`, `PortNumber<T>`) with sensible defaults, plus concrete aliases (`Natural`, `Whole`) are in `domain.hpp`.
 
 ### Zero-Overhead Examples (`examples/zero_overhead/`)
 

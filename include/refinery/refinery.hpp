@@ -16,10 +16,10 @@
 //   }
 //
 //   // Compile-time verification
-//   consteval int demo() {
+//   consteval std::int32_t demo() {
 //       PositiveI32 x{42};      // OK
 //       // PositiveI32 y{-1};   // COMPILE ERROR with rich message
-//       return safe_divide(100, NonZeroI32{2});
+//       return safe_divide(std::int32_t{100}, NonZeroI32{2});
 //   }
 //
 //   // Runtime validation

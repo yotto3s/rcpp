@@ -12,7 +12,8 @@ A header-only library providing Liquid Haskell-style refinement types for C++26,
 - **Predicate composition**: `All<P1,P2>`, `Any<P1,P2>`, `Not<P>`, `If<P1,P2>`, etc.
 - **Interval arithmetic**: `Interval<Lo, Hi>` structural predicates with compile-time arithmetic — `[1,10] + [1,10]` automatically yields `[2,20]`
 - **Type-safe operations**: `safe_divide`, `safe_sqrt`, `safe_log`, `safe_asin`, `safe_acos`, `safe_reciprocal`, `abs`, `square`, `refined_min/max`
-- **Float type aliases**: `FiniteF64`, `NormalizedF64`, `UnitDouble` (domain), etc.
+- **Float type aliases**: `FiniteF64`, `NormalizedF64`, etc.
+- **Domain aliases**: `Percentage<>`, `Probability<>`, `UnitDouble<>`, `PortNumber<>`, etc. — type-parameterized with sensible defaults (`#include <refinery/domain.hpp>`)
 - **Zero runtime overhead**: Assembly-verified — `Refined<T>` produces identical machine code to raw `T` at `-O2`
 
 ## Requirements

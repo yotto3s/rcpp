@@ -39,7 +39,7 @@ consteval int test_compile_time_construction() {
     NonZeroI32 nz{-5};
     NonNegativeI32 nn{0};
 
-    Percentage pct{50};
+    Percentage<> pct{50};
 
     if (p1.get() != 42)
         throw "p1 should be 42";
@@ -59,7 +59,7 @@ consteval double test_float_compile_time() {
     PositiveF64 pd{3.14};
     FiniteF64 fd{2.718};
     NormalizedF64 nd{0.5};
-    UnitDouble ud{0.75};
+    UnitDouble<> ud{0.75};
 
     if (pd.get() != 3.14)
         throw "pd should be 3.14";
@@ -103,7 +103,7 @@ TEST(RuntimeConstruction, FloatTypes) {
     NormalizedF64 nd{-0.5, runtime_check};
     EXPECT_EQ(nd.get(), -0.5);
 
-    UnitDouble ud{0.5, runtime_check};
+    UnitDouble<> ud{0.5, runtime_check};
     EXPECT_EQ(ud.get(), 0.5);
 
     EXPECT_THROW(
@@ -113,7 +113,7 @@ TEST(RuntimeConstruction, FloatTypes) {
         FiniteF64(std::numeric_limits<double>::infinity(), runtime_check),
         refinement_error);
     EXPECT_THROW(NormalizedF64(2.0, runtime_check), refinement_error);
-    EXPECT_THROW(UnitDouble(-0.1, runtime_check), refinement_error);
+    EXPECT_THROW((UnitDouble<>(-0.1, runtime_check)), refinement_error);
 }
 
 TEST(TryRefine, ValidAndInvalid) {
@@ -229,7 +229,7 @@ TEST(Composition, AllAnyNotIf) {
 
 TEST(Operations, SafeArithmetic) {
     constexpr NonZeroI32 denom{2};
-    constexpr int result = safe_divide(10, denom);
+    constexpr std::int32_t result = safe_divide(std::int32_t{10}, denom);
     static_assert(result == 5);
 
     constexpr auto abs_neg = refinery::abs(-5);
@@ -331,16 +331,16 @@ TEST(Operations, FloatMath) {
 }
 
 TEST(TypeAliases, All) {
-    constexpr Percentage pct{75};
+    constexpr Percentage<> pct{75};
     static_assert(pct.get() == 75);
 
-    constexpr Probability prob{0.5};
+    constexpr Probability<> prob{0.5};
     static_assert(prob.get() == 0.5);
 
-    constexpr ByteValue byte{255};
+    constexpr ByteValue<> byte{255};
     static_assert(byte.get() == 255);
 
-    constexpr PortNumber port{8080};
+    constexpr PortNumber<> port{8080};
     static_assert(port.get() == 8080);
 }
 
@@ -701,9 +701,9 @@ TEST(Composition, RuntimeComposition) {
 TEST(Operations, TransformRefined) {
     PositiveI32 p{5, runtime_check};
     auto doubled =
-        transform_refined<NonNegative>(p, [](int v) { return v * 2; });
+        transform_refined<NonNegative>(p, [](std::int32_t v) { return v * 2; });
     EXPECT_EQ(doubled.get(), 10);
-    static_assert(std::same_as<decltype(doubled), Refined<int, NonNegative>>);
+    static_assert(std::same_as<decltype(doubled), Refined<std::int32_t, NonNegative>>);
 }
 
 TEST(Operations, IncrementDecrement) {
@@ -744,13 +744,13 @@ TEST(Operations, RefinedClamp) {
 TEST(Concept, IsRefined) {
     static_assert(is_refined<PositiveI32>);
     static_assert(is_refined<NonZeroF64>);
-    static_assert(is_refined<Percentage>);
+    static_assert(is_refined<Percentage<>>);
     static_assert(!is_refined<int>);
     static_assert(!is_refined<double>);
 
     // Works with curried predicates (capturing lambdas)
     static_assert(is_refined<Refined<int, InRange(0, 100)>>);
-    static_assert(is_refined<UnitDouble>);
+    static_assert(is_refined<UnitDouble<>>);
 }
 
 // ---- Checked Arithmetic Tests ----
