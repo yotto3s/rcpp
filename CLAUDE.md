@@ -41,7 +41,8 @@ refined.hpp  (main entry point, type aliases, convenience macros)
   ├── predicates.hpp    (35+ standard predicates: Positive, NonZero, InRange, Even, Finite, NotNaN, etc.)
   ├── compose.hpp       (All<>, Any<>, Not<>, If<>, runtime composition)
   ├── refined_type.hpp  (core Refined<T, Predicate> template)
-  └── operations.hpp    (safe arithmetic with predicate preservation traits, safe float math)
+  ├── operations.hpp    (safe arithmetic with predicate preservation traits, safe float math)
+  └── interval.hpp      (Interval<Lo,Hi> structural predicate, compile-time interval arithmetic)
 ```
 
 ### Core Design
@@ -54,6 +55,8 @@ refined.hpp  (main entry point, type aliases, convenience macros)
 **Predicates** are constexpr callable objects (lambdas) passed as non-type template parameters. Curried predicates (e.g., `InRange(lo, hi)`, `GreaterThan(n)`) return new predicates.
 
 **Operations** (`operations.hpp`) use a `traits::preserves<Predicate, Operation>` trait system to determine if arithmetic preserves a refinement (e.g., Positive + Positive = Positive). When preservation is provable, operations return `Refined`; otherwise they return `std::optional<Refined>`. Safe float math functions (`safe_sqrt`, `safe_log`, `safe_asin`, `safe_acos`, `safe_reciprocal`) accept specifically-refined inputs (e.g., `Refined<T, Positive>`) and return `Refined` when the predicate is preserved, or plain `T` otherwise.
+
+**Interval arithmetic** (`interval.hpp`) provides `Interval<Lo, Hi>` structural predicates that carry their bounds as template parameters. Arithmetic on interval-refined values computes result bounds at compile time (e.g., `[0,100] + [0,100]` yields `[0,200]`). The `IntervalRefined<T, Lo, Hi>` alias is a convenience for `Refined<T, Interval<Lo, Hi>{}>`.
 
 ### Key Type Aliases (defined in `refined.hpp`)
 
