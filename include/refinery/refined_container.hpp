@@ -5,8 +5,8 @@
 #define REFINERY_REFINED_CONTAINER_HPP
 
 #include <array>
-#include <cstddef>
 #include <concepts>
+#include <cstddef>
 #include <format>
 #include <limits>
 #include <optional>
@@ -61,7 +61,7 @@ consteval auto size_interval_shift() {
     constexpr auto hi = traits::size_interval_traits<decltype(Pred)>::hi;
     constexpr auto max_sz = std::numeric_limits<std::size_t>::max();
 
-    constexpr auto new_lo = []{
+    constexpr auto new_lo = [] {
         if constexpr (Delta >= 0) {
             constexpr auto d = static_cast<std::size_t>(Delta);
             return (lo > max_sz - d) ? max_sz : lo + d;
@@ -71,7 +71,7 @@ consteval auto size_interval_shift() {
         }
     }();
 
-    constexpr auto new_hi = []{
+    constexpr auto new_hi = [] {
         if constexpr (Delta >= 0) {
             constexpr auto d = static_cast<std::size_t>(Delta);
             return (hi > max_sz - d) ? max_sz : hi + d;
@@ -91,8 +91,7 @@ concept SizedContainer = requires(const C& c) {
 };
 
 // Branded index -- only constructible by its matching SizeGuard
-template <auto Tag>
-class GuardedIndex {
+template <auto Tag> class GuardedIndex {
   public:
     [[nodiscard]] constexpr std::size_t get() const noexcept { return index_; }
 
@@ -101,13 +100,11 @@ class GuardedIndex {
 
     constexpr explicit GuardedIndex(std::size_t idx) noexcept : index_(idx) {}
 
-    template <auto T>
-    friend class SizeGuard;
+    template <auto T> friend class SizeGuard;
 };
 
 // Size witness -- captures runtime size and produces branded indices
-template <auto Tag>
-class SizeGuard {
+template <auto Tag> class SizeGuard {
   public:
     constexpr explicit SizeGuard(std::size_t size) noexcept : size_(size) {}
 
@@ -119,9 +116,7 @@ class SizeGuard {
         return std::nullopt;
     }
 
-    [[nodiscard]] constexpr std::size_t size() const noexcept {
-        return size_;
-    }
+    [[nodiscard]] constexpr std::size_t size() const noexcept { return size_; }
 
   private:
     std::size_t size_;
@@ -258,16 +253,14 @@ class RefinedContainer {
     // Predicate-gated access: only available when size >= 1 is provable
     [[nodiscard]] constexpr const auto& front() const
         requires(size_interval_predicate<SizePredicate> &&
-                 traits::size_interval_traits<
-                     decltype(SizePredicate)>::lo >= 1)
+                 traits::size_interval_traits<decltype(SizePredicate)>::lo >= 1)
     {
         return container_.front();
     }
 
     [[nodiscard]] constexpr const auto& back() const
         requires(size_interval_predicate<SizePredicate> &&
-                 traits::size_interval_traits<
-                     decltype(SizePredicate)>::lo >= 1)
+                 traits::size_interval_traits<decltype(SizePredicate)>::lo >= 1)
     {
         return container_.back();
     }
@@ -278,8 +271,7 @@ class RefinedContainer {
         requires(size_interval_predicate<SizePredicate> &&
                  detail::has_interval_bounds<IndexPred> &&
                  decltype(IndexPred)::hi <
-                     traits::size_interval_traits<
-                         decltype(SizePredicate)>::lo)
+                     traits::size_interval_traits<decltype(SizePredicate)>::lo)
     [[nodiscard]] constexpr const auto&
     operator[](Refined<std::size_t, IndexPred> idx) const {
         return container_[idx.get()];
@@ -302,10 +294,10 @@ class RefinedContainer {
 
     // pop_back: delta -1, requires non-empty
     [[nodiscard]] constexpr auto pop_back() &&
-        requires requires(Container& c) { c.pop_back(); } &&
-                 (size_interval_predicate<SizePredicate> &&
-                  traits::size_interval_traits<
-                      decltype(SizePredicate)>::lo >= 1)
+        requires requires(Container& c) {
+            c.pop_back();
+        } && (size_interval_predicate<SizePredicate> &&
+              traits::size_interval_traits<decltype(SizePredicate)>::lo >= 1)
     {
         container_.pop_back();
         constexpr auto new_pred = size_interval_shift<SizePredicate, -1>();
@@ -329,9 +321,7 @@ class RefinedContainer {
     // Append from std::array (compile-time-known size N)
     template <typename V, std::size_t N>
     [[nodiscard]] constexpr auto append(const std::array<V, N>& source) &&
-        requires requires(Container& c, const V& v) {
-            c.push_back(v);
-        }
+        requires requires(Container& c, const V& v) { c.push_back(v); }
     {
         for (const auto& elem : source) {
             container_.push_back(elem);
@@ -347,8 +337,7 @@ class RefinedContainer {
     template <SizedContainer C2, auto SizePred2>
     [[nodiscard]] constexpr auto
     append(RefinedContainer<C2, SizePred2>&& source) &&
-        requires requires(Container& c,
-                          const typename C2::value_type& v) {
+        requires requires(Container& c, const typename C2::value_type& v) {
             c.push_back(v);
         } && size_interval_predicate<SizePred2>
     {
@@ -358,21 +347,18 @@ class RefinedContainer {
         }
         constexpr std::ptrdiff_t delta = static_cast<std::ptrdiff_t>(
             traits::size_interval_traits<decltype(SizePred2)>::lo);
-        constexpr auto new_pred =
-            size_interval_shift<SizePredicate, delta>();
+        constexpr auto new_pred = size_interval_shift<SizePredicate, delta>();
         return RefinedContainer<Container, new_pred>(std::move(container_),
                                                      assume_valid);
     }
 
     // Freeze: capture actual size and produce branded guard + frozen container.
     // Each call site gets a unique Tag type via the default lambda NTTP.
-    template <auto Tag = []{}>
-    [[nodiscard]] constexpr auto freeze() && {
+    template <auto Tag = [] {}> [[nodiscard]] constexpr auto freeze() && {
         auto sz = container_.size();
-        return std::pair{
-            SizeGuard<Tag>{sz},
-            FrozenContainer<Container, SizePredicate, Tag>(
-                std::move(container_), assume_valid)};
+        return std::pair{SizeGuard<Tag>{sz},
+                         FrozenContainer<Container, SizePredicate, Tag>(
+                             std::move(container_), assume_valid)};
     }
 };
 

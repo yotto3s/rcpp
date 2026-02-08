@@ -85,10 +85,9 @@ TEST(RefinedContainerConstruction, RuntimeCheckValid) {
 
 TEST(RefinedContainerConstruction, RuntimeCheckInvalid) {
     std::vector<int> v{1, 2};
-    EXPECT_THROW(
-        (RefinedContainer<std::vector<int>, SizeInterval<3>{}>(std::move(v),
-                                                               runtime_check)),
-        refinement_error);
+    EXPECT_THROW((RefinedContainer<std::vector<int>, SizeInterval<3>{}>(
+                     std::move(v), runtime_check)),
+                 refinement_error);
 }
 
 TEST(RefinedContainerConstruction, AssumeValid) {
@@ -117,8 +116,8 @@ TEST(RefinedContainerConstruction, Release) {
 }
 
 TEST(RefinedContainerConstruction, ConstevalValid) {
-    constexpr auto rc = SizeRefined<std::array<int, 3>, 3, 3>(
-        std::array{1, 2, 3});
+    constexpr auto rc =
+        SizeRefined<std::array<int, 3>, 3, 3>(std::array{1, 2, 3});
     static_assert(rc.size() == 3);
     EXPECT_EQ(rc.size(), 3);
 }
@@ -228,9 +227,9 @@ TEST(RefinedContainerMutation, PushBack) {
     EXPECT_EQ(rc2.back(), 4);
 
     // Verify the predicate was updated: rc2 should have SizeInterval<4>
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<int>, SizeInterval<4>{}>>);
+    static_assert(
+        std::same_as<decltype(rc2),
+                     RefinedContainer<std::vector<int>, SizeInterval<4>{}>>);
 }
 
 TEST(RefinedContainerMutation, PopBack) {
@@ -244,10 +243,10 @@ TEST(RefinedContainerMutation, PopBack) {
     // Verify predicate: SizeInterval<3, SIZE_MAX> - 1
     //   -> SizeInterval<2, SIZE_MAX - 1>
     constexpr auto max_sz = std::numeric_limits<std::size_t>::max();
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<int>,
-                                   SizeInterval<2, max_sz - 1>{}>>);
+    static_assert(
+        std::same_as<
+            decltype(rc2),
+            RefinedContainer<std::vector<int>, SizeInterval<2, max_sz - 1>{}>>);
 }
 
 TEST(RefinedContainerMutation, EmplaceBack) {
@@ -259,9 +258,9 @@ TEST(RefinedContainerMutation, EmplaceBack) {
     EXPECT_EQ(rc2.size(), 2);
     EXPECT_EQ(rc2.back(), "world");
 
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<std::string>, SizeInterval<2>{}>>);
+    static_assert(
+        std::same_as<decltype(rc2), RefinedContainer<std::vector<std::string>,
+                                                     SizeInterval<2>{}>>);
 }
 
 TEST(RefinedContainerMutation, ChainedPushBack) {
@@ -273,9 +272,9 @@ TEST(RefinedContainerMutation, ChainedPushBack) {
     EXPECT_EQ(rc2.size(), 3);
     EXPECT_EQ(rc2.front(), 1);
 
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<int>, SizeInterval<3>{}>>);
+    static_assert(
+        std::same_as<decltype(rc2),
+                     RefinedContainer<std::vector<int>, SizeInterval<3>{}>>);
 }
 
 // --- Static indexing tests ---
@@ -286,8 +285,8 @@ TEST(RefinedContainerIndex, StaticBoundsAccess) {
                                                              runtime_check);
 
     // Interval<0, 4> has upper bound 4 < lower bound 5 -> compiles
-    using Idx = Refined<std::size_t,
-                        Interval<std::size_t{0}, std::size_t{4}>{}>;
+    using Idx =
+        Refined<std::size_t, Interval<std::size_t{0}, std::size_t{4}>{}>;
     Idx idx{3};
     EXPECT_EQ(rc[idx], 40);
 }
@@ -297,19 +296,18 @@ TEST(RefinedContainerIndex, ZeroIndex) {
     RefinedContainer<std::vector<int>, SizeInterval<2>{}> rc(std::move(v),
                                                              runtime_check);
 
-    using Idx = Refined<std::size_t,
-                        Interval<std::size_t{0}, std::size_t{1}>{}>;
+    using Idx =
+        Refined<std::size_t, Interval<std::size_t{0}, std::size_t{1}>{}>;
     Idx idx{0};
     EXPECT_EQ(rc[idx], 42);
 }
 
 // Compile-time: index with upper bound < container lower bound should work
-static_assert(
-    requires(RefinedContainer<std::vector<int>, SizeInterval<5>{}> rc,
-             Refined<std::size_t,
-                     Interval<std::size_t{0}, std::size_t{4}>{}> idx) {
-        rc[idx]; // upper bound 4 < lower bound 5 -> should compile
-    });
+static_assert(requires(
+    RefinedContainer<std::vector<int>, SizeInterval<5>{}> rc,
+    Refined<std::size_t, Interval<std::size_t{0}, std::size_t{4}>{}> idx) {
+    rc[idx]; // upper bound 4 < lower bound 5 -> should compile
+});
 
 // --- Range insertion tests ---
 
@@ -324,9 +322,9 @@ TEST(RefinedContainerAppend, FromArray) {
     EXPECT_EQ(rc2.back(), 5);
 
     // SizeInterval<3> + 2 -> SizeInterval<5>
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<int>, SizeInterval<5>{}>>);
+    static_assert(
+        std::same_as<decltype(rc2),
+                     RefinedContainer<std::vector<int>, SizeInterval<5>{}>>);
 }
 
 TEST(RefinedContainerAppend, FromRefinedContainer) {
@@ -342,9 +340,9 @@ TEST(RefinedContainerAppend, FromRefinedContainer) {
     auto result = std::move(target).append(std::move(source));
     EXPECT_EQ(result.size(), 5);
 
-    static_assert(std::same_as<
-                  decltype(result),
-                  RefinedContainer<std::vector<int>, SizeInterval<5>{}>>);
+    static_assert(
+        std::same_as<decltype(result),
+                     RefinedContainer<std::vector<int>, SizeInterval<5>{}>>);
 }
 
 TEST(RefinedContainerAppend, FromEmptyArray) {
@@ -357,9 +355,9 @@ TEST(RefinedContainerAppend, FromEmptyArray) {
     EXPECT_EQ(rc2.size(), 1);
 
     // SizeInterval<1> + 0 -> SizeInterval<1>
-    static_assert(std::same_as<
-                  decltype(rc2),
-                  RefinedContainer<std::vector<int>, SizeInterval<1>{}>>);
+    static_assert(
+        std::same_as<decltype(rc2),
+                     RefinedContainer<std::vector<int>, SizeInterval<1>{}>>);
 }
 
 // --- Freeze/guard tests ---
@@ -480,7 +478,7 @@ TEST(RefinedContainerAlias, NonEmptyContainer) {
 
 TEST(RefinedContainerAlias, NonEmptyContainerThrows) {
     std::vector<int> v;
-    EXPECT_THROW((NonEmptyContainer<std::vector<int>>(std::move(v),
-                                                       runtime_check)),
-                 refinement_error);
+    EXPECT_THROW(
+        (NonEmptyContainer<std::vector<int>>(std::move(v), runtime_check)),
+        refinement_error);
 }
