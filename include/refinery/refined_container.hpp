@@ -9,7 +9,9 @@
 #include <concepts>
 #include <format>
 #include <limits>
+#include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "refined_type.hpp"
 
@@ -74,6 +76,76 @@ consteval auto size_interval_shift() {
 template <typename C>
 concept SizedContainer = requires(const C& c) {
     { c.size() } -> std::convertible_to<std::size_t>;
+};
+
+// Branded index -- only constructible by its matching SizeGuard
+template <auto Tag>
+class GuardedIndex {
+  public:
+    [[nodiscard]] constexpr std::size_t get() const noexcept { return index_; }
+
+  private:
+    std::size_t index_;
+
+    constexpr explicit GuardedIndex(std::size_t idx) noexcept : index_(idx) {}
+
+    template <auto T>
+    friend class SizeGuard;
+};
+
+// Size witness -- captures runtime size and produces branded indices
+template <auto Tag>
+class SizeGuard {
+  public:
+    constexpr explicit SizeGuard(std::size_t size) noexcept : size_(size) {}
+
+    [[nodiscard]] constexpr std::optional<GuardedIndex<Tag>>
+    check(std::size_t idx) const noexcept {
+        if (idx < size_) {
+            return GuardedIndex<Tag>(idx);
+        }
+        return std::nullopt;
+    }
+
+    [[nodiscard]] constexpr std::size_t size() const noexcept {
+        return size_;
+    }
+
+  private:
+    std::size_t size_;
+};
+
+// Frozen container -- accepts only matching GuardedIndex for element access
+template <SizedContainer Container, auto SizePredicate, auto Tag>
+class FrozenContainer {
+  public:
+    constexpr explicit FrozenContainer(Container container,
+                                       assume_valid_t) noexcept
+        : container_(std::move(container)) {}
+
+    [[nodiscard]] constexpr const auto&
+    operator[](GuardedIndex<Tag> idx) const {
+        return container_[idx.get()];
+    }
+
+    [[nodiscard]] constexpr std::size_t size() const noexcept {
+        return container_.size();
+    }
+
+    [[nodiscard]] constexpr bool empty() const noexcept {
+        return container_.empty();
+    }
+
+    [[nodiscard]] constexpr auto begin() const noexcept {
+        return container_.begin();
+    }
+
+    [[nodiscard]] constexpr auto end() const noexcept {
+        return container_.end();
+    }
+
+  private:
+    Container container_;
 };
 
 // Core refined container wrapper
@@ -261,6 +333,17 @@ class RefinedContainer {
             size_interval_shift<SizePredicate, delta>();
         return RefinedContainer<Container, new_pred>(std::move(container_),
                                                      assume_valid);
+    }
+
+    // Freeze: capture actual size and produce branded guard + frozen container.
+    // Each call site gets a unique Tag type via the default lambda NTTP.
+    template <auto Tag = []{}>
+    [[nodiscard]] constexpr auto freeze() && {
+        auto sz = container_.size();
+        return std::pair{
+            SizeGuard<Tag>{sz},
+            FrozenContainer<Container, SizePredicate, Tag>(
+                std::move(container_), assume_valid)};
     }
 };
 

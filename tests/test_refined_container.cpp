@@ -338,3 +338,105 @@ TEST(RefinedContainerAppend, FromEmptyArray) {
                   decltype(rc2),
                   RefinedContainer<std::vector<int>, SizeInterval<1>{}>>);
 }
+
+// --- Freeze/guard tests ---
+
+TEST(FreezeGuard, BasicUsage) {
+    std::vector<int> v{10, 20, 30, 40, 50};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+
+    auto [guard, frozen] = std::move(rc).freeze();
+
+    // Valid index
+    auto idx = guard.check(2);
+    ASSERT_TRUE(idx.has_value());
+    EXPECT_EQ(frozen[*idx], 30);
+}
+
+TEST(FreezeGuard, OutOfBounds) {
+    std::vector<int> v{10, 20, 30};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+
+    auto [guard, frozen] = std::move(rc).freeze();
+
+    // Out-of-bounds index
+    auto idx = guard.check(5);
+    EXPECT_FALSE(idx.has_value());
+}
+
+TEST(FreezeGuard, BoundaryIndex) {
+    std::vector<int> v{10, 20, 30};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+
+    auto [guard, frozen] = std::move(rc).freeze();
+
+    // Last valid index
+    auto last = guard.check(2);
+    ASSERT_TRUE(last.has_value());
+    EXPECT_EQ(frozen[*last], 30);
+
+    // One past end
+    auto past = guard.check(3);
+    EXPECT_FALSE(past.has_value());
+}
+
+TEST(FreezeGuard, IterationThroughGuard) {
+    std::vector<int> v{1, 2, 3, 4, 5};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+
+    auto [guard, frozen] = std::move(rc).freeze();
+
+    int sum = 0;
+    for (std::size_t i = 0;; ++i) {
+        auto idx = guard.check(i);
+        if (!idx)
+            break;
+        sum += frozen[*idx];
+    }
+    EXPECT_EQ(sum, 15);
+}
+
+// Compile-time branding: indices from different freeze() calls are
+// incompatible
+TEST(FreezeGuard, BrandingPreventsTypeMismatch) {
+    // Two different freeze() call sites produce different Tag types
+    std::vector<int> v1{10, 20};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc1(std::move(v1),
+                                                              runtime_check);
+    auto [guard1, frozen1] = std::move(rc1).freeze();
+
+    std::vector<int> v2{30, 40, 50};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc2(std::move(v2),
+                                                              runtime_check);
+    auto [guard2, frozen2] = std::move(rc2).freeze();
+
+    // guard1 and guard2 should produce different GuardedIndex types
+    auto idx1 = guard1.check(0);
+    auto idx2 = guard2.check(0);
+    ASSERT_TRUE(idx1.has_value());
+    ASSERT_TRUE(idx2.has_value());
+
+    // These should work (matching brands)
+    EXPECT_EQ(frozen1[*idx1], 10);
+    EXPECT_EQ(frozen2[*idx2], 30);
+
+    // The following should NOT compile (mismatched brands):
+    // frozen1[*idx2];  // error: different Tag types
+    // frozen2[*idx1];  // error: different Tag types
+
+    // Verify the types are actually different
+    static_assert(!std::same_as<decltype(*idx1), decltype(*idx2)>);
+}
+
+TEST(FreezeGuard, FrozenContainerSize) {
+    std::vector<int> v{1, 2, 3};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+
+    auto [guard, frozen] = std::move(rc).freeze();
+    EXPECT_EQ(frozen.size(), 3);
+}
