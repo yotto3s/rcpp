@@ -162,6 +162,18 @@ class RefinedContainer {
     Container container_;
 
   public:
+    // Compile-time verified construction (consteval)
+    // Fails at compile time if the size predicate is not satisfied.
+    consteval explicit RefinedContainer(Container container)
+        : container_(std::move(container)) {
+        if (!SizePredicate(container_.size())) {
+            throw refinement_error(
+                std::format("Size refinement violation: size {} does not "
+                            "satisfy predicate",
+                            container_.size()));
+        }
+    }
+
     // Runtime checked construction
     constexpr explicit RefinedContainer(Container container, runtime_check_t)
         : container_(std::move(container)) {

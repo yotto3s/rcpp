@@ -1,7 +1,7 @@
 // 01_construction.cpp — RefinedContainer construction modes
 //
 // Demonstrates four ways to construct a RefinedContainer:
-//   1. constexpr      — compile-time verified (constexpr + runtime_check)
+//   1. consteval      — compile-time verified (no tag, like Refined<T,P>)
 //   2. runtime_check  — validates size predicate at runtime
 //   3. assume_valid   — unchecked, for trusted contexts
 //   4. SizeRefined    — convenience alias with explicit size range
@@ -16,12 +16,12 @@
 using namespace refinery;
 
 int main() {
-    // 1. constexpr — compile-time verified construction
-    //    Using std::array in a constexpr context, runtime_check becomes a
-    //    compile-time check. A size violation here is a compile error.
+    // 1. consteval — compile-time verified construction (no tag)
+    //    Like Refined<T,P>, the default constructor is consteval.
+    //    A size violation here is a compile error.
     constexpr auto compile_time = SizeRefined<std::array<int, 3>, 3, 3>(
-        std::array{10, 20, 30}, runtime_check);
-    std::cout << "constexpr:     size = " << compile_time.size() << "\n";
+        std::array{10, 20, 30});
+    std::cout << "consteval:     size = " << compile_time.size() << "\n";
     static_assert(compile_time.size() == 3);
 
     // 2. runtime_check — construct NonEmptyContainer from a populated vector
