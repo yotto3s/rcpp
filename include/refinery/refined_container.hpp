@@ -50,25 +50,34 @@ template <auto Pred>
 concept size_interval_predicate =
     traits::size_interval_traits<decltype(Pred)>::value;
 
-// Compute new SizeInterval after shifting bounds by Delta
+// Compute new SizeInterval after shifting bounds by Delta.
+// Uses saturating arithmetic: clamps to 0 on underflow, SIZE_MAX on overflow.
 template <auto Pred, std::ptrdiff_t Delta>
     requires size_interval_predicate<Pred>
 consteval auto size_interval_shift() {
     constexpr auto lo = traits::size_interval_traits<decltype(Pred)>::lo;
     constexpr auto hi = traits::size_interval_traits<decltype(Pred)>::hi;
-
-    constexpr auto new_lo =
-        (Delta >= 0)
-            ? lo + static_cast<std::size_t>(Delta)
-            : lo - static_cast<std::size_t>(-Delta);
-
     constexpr auto max_sz = std::numeric_limits<std::size_t>::max();
-    constexpr auto new_hi =
-        (hi == max_sz)
-            ? max_sz
-            : (Delta >= 0)
-                  ? hi + static_cast<std::size_t>(Delta)
-                  : hi - static_cast<std::size_t>(-Delta);
+
+    constexpr auto new_lo = []{
+        if constexpr (Delta >= 0) {
+            constexpr auto d = static_cast<std::size_t>(Delta);
+            return (lo > max_sz - d) ? max_sz : lo + d;
+        } else {
+            constexpr auto d = static_cast<std::size_t>(-Delta);
+            return (lo < d) ? std::size_t{0} : lo - d;
+        }
+    }();
+
+    constexpr auto new_hi = []{
+        if constexpr (Delta >= 0) {
+            constexpr auto d = static_cast<std::size_t>(Delta);
+            return (hi > max_sz - d) ? max_sz : hi + d;
+        } else {
+            constexpr auto d = static_cast<std::size_t>(-Delta);
+            return (hi < d) ? std::size_t{0} : hi - d;
+        }
+    }();
 
     return SizeInterval<new_lo, new_hi>{};
 }

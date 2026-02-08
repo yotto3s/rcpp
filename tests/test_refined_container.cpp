@@ -194,6 +194,21 @@ TEST(SizeIntervalShift, MultipleElements) {
     static_assert(shifted.lo == 5);
 }
 
+TEST(SizeIntervalShift, SaturatesAtZero) {
+    // SizeInterval<0, 10> - 1 should clamp lo to 0, not wrap to SIZE_MAX
+    constexpr auto shifted = size_interval_shift<SizeInterval<0, 10>{}, -1>();
+    static_assert(shifted.lo == 0);
+    static_assert(shifted.hi == 9);
+}
+
+TEST(SizeIntervalShift, SaturatesAtMax) {
+    // SizeInterval<5, SIZE_MAX-1> + 3 should clamp hi to SIZE_MAX
+    constexpr auto shifted = size_interval_shift<
+        SizeInterval<5, std::numeric_limits<std::size_t>::max() - 1>{}, 3>();
+    static_assert(shifted.lo == 8);
+    static_assert(shifted.hi == std::numeric_limits<std::size_t>::max());
+}
+
 // --- Mutation tests ---
 
 TEST(RefinedContainerMutation, PushBack) {
@@ -219,10 +234,13 @@ TEST(RefinedContainerMutation, PopBack) {
     auto rc2 = std::move(rc).pop_back();
     EXPECT_EQ(rc2.size(), 2);
 
-    // Verify predicate: SizeInterval<3> - 1 -> SizeInterval<2>
+    // Verify predicate: SizeInterval<3, SIZE_MAX> - 1
+    //   -> SizeInterval<2, SIZE_MAX - 1>
+    constexpr auto max_sz = std::numeric_limits<std::size_t>::max();
     static_assert(std::same_as<
                   decltype(rc2),
-                  RefinedContainer<std::vector<int>, SizeInterval<2>{}>>);
+                  RefinedContainer<std::vector<int>,
+                                   SizeInterval<2, max_sz - 1>{}>>);
 }
 
 TEST(RefinedContainerMutation, EmplaceBack) {
