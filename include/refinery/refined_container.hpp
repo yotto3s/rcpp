@@ -14,6 +14,8 @@
 #include <utility>
 #include <vector>
 
+#include <meta>
+
 #include "refined_type.hpp"
 
 namespace refinery {
@@ -176,10 +178,11 @@ class RefinedContainer {
     consteval explicit RefinedContainer(Container container)
         : container_(std::move(container)) {
         if (!SizePredicate(container_.size())) {
-            throw refinement_error(
+            throw std::meta::exception(
                 std::format("Size refinement violation: size {} does not "
                             "satisfy predicate",
-                            container_.size()));
+                            container_.size()),
+                ^^RefinedContainer);
         }
     }
 
