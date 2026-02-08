@@ -114,3 +114,52 @@ TEST(RefinedContainerConstruction, Release) {
     EXPECT_EQ(released.size(), 3);
     EXPECT_EQ(released[1], 20);
 }
+
+// --- Iterator pass-through tests ---
+
+TEST(RefinedContainerIterators, BeginEnd) {
+    std::vector<int> v{1, 2, 3};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+    int sum = 0;
+    for (const auto& x : rc) {
+        sum += x;
+    }
+    EXPECT_EQ(sum, 6);
+}
+
+TEST(RefinedContainerIterators, Data) {
+    std::vector<int> v{10, 20, 30};
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+    const int* p = rc.data();
+    EXPECT_EQ(p[0], 10);
+    EXPECT_EQ(p[2], 30);
+}
+
+// --- Predicate-gated access tests ---
+
+TEST(RefinedContainerGatedAccess, FrontBackWithNonEmpty) {
+    std::vector<int> v{10, 20, 30};
+    // SizeInterval<1> guarantees non-empty -> front()/back() should compile
+    RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc(std::move(v),
+                                                             runtime_check);
+    EXPECT_EQ(rc.front(), 10);
+    EXPECT_EQ(rc.back(), 30);
+}
+
+TEST(RefinedContainerGatedAccess, FrontBackWithExactSize) {
+    std::vector<int> v{42};
+    // SizeInterval<1, 1> guarantees exactly 1 element
+    RefinedContainer<std::vector<int>, SizeInterval<1, 1>{}> rc(std::move(v),
+                                                                runtime_check);
+    EXPECT_EQ(rc.front(), 42);
+    EXPECT_EQ(rc.back(), 42);
+}
+
+// Compile-time check: front()/back() compile when size >= 1 is provable
+static_assert(
+    requires(RefinedContainer<std::vector<int>, SizeInterval<1>{}> rc) {
+        rc.front();
+        rc.back();
+    });

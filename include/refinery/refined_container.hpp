@@ -105,6 +105,47 @@ class RefinedContainer {
     [[nodiscard]] constexpr bool empty() const noexcept {
         return container_.empty();
     }
+
+    // Iterators (always available)
+    [[nodiscard]] constexpr auto begin() const noexcept {
+        return container_.begin();
+    }
+
+    [[nodiscard]] constexpr auto end() const noexcept {
+        return container_.end();
+    }
+
+    [[nodiscard]] constexpr auto cbegin() const noexcept {
+        return container_.cbegin();
+    }
+
+    [[nodiscard]] constexpr auto cend() const noexcept {
+        return container_.cend();
+    }
+
+    // Data pointer (for contiguous containers)
+    [[nodiscard]] constexpr auto data() const noexcept
+        requires requires(const Container& c) { c.data(); }
+    {
+        return container_.data();
+    }
+
+    // Predicate-gated access: only available when size >= 1 is provable
+    [[nodiscard]] constexpr const auto& front() const
+        requires(size_interval_predicate<SizePredicate> &&
+                 traits::size_interval_traits<
+                     decltype(SizePredicate)>::lo >= 1)
+    {
+        return container_.front();
+    }
+
+    [[nodiscard]] constexpr const auto& back() const
+        requires(size_interval_predicate<SizePredicate> &&
+                 traits::size_interval_traits<
+                     decltype(SizePredicate)>::lo >= 1)
+    {
+        return container_.back();
+    }
 };
 
 } // namespace refinery
