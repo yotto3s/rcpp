@@ -1,12 +1,14 @@
 // 01_construction.cpp — RefinedContainer construction modes
 //
-// Demonstrates three ways to construct a RefinedContainer:
-//   1. runtime_check  — validates size predicate at runtime
-//   2. assume_valid   — unchecked, for trusted contexts
-//   3. SizeRefined    — convenience alias with explicit size range
+// Demonstrates four ways to construct a RefinedContainer:
+//   1. constexpr      — compile-time verified (constexpr + runtime_check)
+//   2. runtime_check  — validates size predicate at runtime
+//   3. assume_valid   — unchecked, for trusted contexts
+//   4. SizeRefined    — convenience alias with explicit size range
 
 #include <refinery/refinery.hpp>
 
+#include <array>
 #include <cassert>
 #include <iostream>
 #include <vector>
@@ -14,7 +16,15 @@
 using namespace refinery;
 
 int main() {
-    // 1. runtime_check — construct NonEmptyContainer from a populated vector
+    // 1. constexpr — compile-time verified construction
+    //    Using std::array in a constexpr context, runtime_check becomes a
+    //    compile-time check. A size violation here is a compile error.
+    constexpr auto compile_time = SizeRefined<std::array<int, 3>, 3, 3>(
+        std::array{10, 20, 30}, runtime_check);
+    std::cout << "constexpr:     size = " << compile_time.size() << "\n";
+    static_assert(compile_time.size() == 3);
+
+    // 2. runtime_check — construct NonEmptyContainer from a populated vector
     //    Throws refinement_error if the vector is empty.
     auto vec1 = std::vector{10, 20, 30};
     auto non_empty = NonEmptyContainer<std::vector<int>>(std::move(vec1),
@@ -22,7 +32,7 @@ int main() {
     std::cout << "runtime_check: size = " << non_empty.size() << "\n";
     assert(non_empty.size() == 3);
 
-    // 2. assume_valid — unchecked construction for trusted contexts
+    // 3. assume_valid — unchecked construction for trusted contexts
     //    Caller guarantees the predicate holds. No runtime cost.
     auto vec2 = std::vector{1, 2};
     auto trusted = NonEmptyContainer<std::vector<int>>(std::move(vec2),
@@ -30,7 +40,7 @@ int main() {
     std::cout << "assume_valid:  size = " << trusted.size() << "\n";
     assert(trusted.size() == 2);
 
-    // 3. SizeRefined — exact size range [3, 5]
+    // 4. SizeRefined — exact size range [3, 5]
     //    Container must have between 3 and 5 elements.
     auto vec3 = std::vector{1, 2, 3, 4};
     auto sized = SizeRefined<std::vector<int>, 3, 5>(std::move(vec3),
