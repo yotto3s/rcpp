@@ -131,10 +131,6 @@ class SizeGuard {
 template <SizedContainer Container, auto SizePredicate, auto Tag>
 class FrozenContainer {
   public:
-    constexpr explicit FrozenContainer(Container container,
-                                       assume_valid_t) noexcept
-        : container_(std::move(container)) {}
-
     [[nodiscard]] constexpr const auto&
     operator[](GuardedIndex<Tag> idx) const {
         return container_[idx.get()];
@@ -158,6 +154,14 @@ class FrozenContainer {
 
   private:
     Container container_;
+
+    constexpr explicit FrozenContainer(Container container,
+                                       assume_valid_t) noexcept
+        : container_(std::move(container)) {}
+
+    template <SizedContainer C, auto SP>
+        requires predicate_for<decltype(SP), std::size_t>
+    friend class RefinedContainer;
 };
 
 // Core refined container wrapper
