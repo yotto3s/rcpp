@@ -347,6 +347,15 @@ class RefinedContainer {
     }
 };
 
+// Convenience alias: RefinedContainer with SizeInterval<Lo, Hi>
+template <SizedContainer C, std::size_t Lo,
+          std::size_t Hi = std::numeric_limits<std::size_t>::max()>
+using SizeRefined = RefinedContainer<C, SizeInterval<Lo, Hi>{}>;
+
+// Convenience alias: non-empty container (size >= 1)
+template <SizedContainer C>
+using NonEmptyContainer = RefinedContainer<C, SizeInterval<1>{}>;
+
 } // namespace refinery
 
 #endif // REFINERY_REFINED_CONTAINER_HPP

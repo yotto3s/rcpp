@@ -440,3 +440,24 @@ TEST(FreezeGuard, FrozenContainerSize) {
     auto [guard, frozen] = std::move(rc).freeze();
     EXPECT_EQ(frozen.size(), 3);
 }
+
+// --- Convenience alias tests ---
+
+TEST(RefinedContainerAlias, SizeRefined) {
+    std::vector<int> v{1, 2, 3, 4, 5};
+    SizeRefined<std::vector<int>, 3> rc(std::move(v), runtime_check);
+    EXPECT_EQ(rc.size(), 5);
+}
+
+TEST(RefinedContainerAlias, NonEmptyContainer) {
+    std::vector<int> v{42};
+    NonEmptyContainer<std::vector<int>> rc(std::move(v), runtime_check);
+    EXPECT_EQ(rc.front(), 42);
+}
+
+TEST(RefinedContainerAlias, NonEmptyContainerThrows) {
+    std::vector<int> v;
+    EXPECT_THROW((NonEmptyContainer<std::vector<int>>(std::move(v),
+                                                       runtime_check)),
+                 refinement_error);
+}
