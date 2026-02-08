@@ -12,6 +12,7 @@
 #include <optional>
 #include <type_traits>
 #include <utility>
+#include <vector>
 
 #include "refined_type.hpp"
 
@@ -355,6 +356,10 @@ using SizeRefined = RefinedContainer<C, SizeInterval<Lo, Hi>{}>;
 // Convenience alias: non-empty container (size >= 1)
 template <SizedContainer C>
 using NonEmptyContainer = RefinedContainer<C, SizeInterval<1>{}>;
+
+// Zero-overhead guarantee: RefinedContainer is the same size as Container
+static_assert(sizeof(RefinedContainer<std::vector<int>, SizeInterval<1>{}>) ==
+              sizeof(std::vector<int>));
 
 } // namespace refinery
 
