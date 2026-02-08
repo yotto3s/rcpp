@@ -5,7 +5,7 @@
 #include <vector>
 
 #include <gtest/gtest.h>
-#include <refinery/refined_container.hpp>
+#include <refinery/refinery.hpp>
 
 using namespace refinery;
 
@@ -114,6 +114,13 @@ TEST(RefinedContainerConstruction, Release) {
     auto released = std::move(rc).release();
     EXPECT_EQ(released.size(), 3);
     EXPECT_EQ(released[1], 20);
+}
+
+TEST(RefinedContainerConstruction, ConstevalValid) {
+    constexpr auto rc = SizeRefined<std::array<int, 3>, 3, 3>(
+        std::array{1, 2, 3});
+    static_assert(rc.size() == 3);
+    EXPECT_EQ(rc.size(), 3);
 }
 
 // --- Iterator pass-through tests ---
@@ -272,8 +279,6 @@ TEST(RefinedContainerMutation, ChainedPushBack) {
 }
 
 // --- Static indexing tests ---
-
-#include <refinery/refinery.hpp>
 
 TEST(RefinedContainerIndex, StaticBoundsAccess) {
     std::vector<int> v{10, 20, 30, 40, 50};
