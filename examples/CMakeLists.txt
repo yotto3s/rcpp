@@ -38,8 +38,10 @@ foreach(example IN LISTS RUNTIME_OVERHEAD_EXAMPLES)
     list(APPEND RUNTIME_OVERHEAD_TARGETS ${target})
 endforeach()
 
+add_subdirectory(containers)
+
 # Umbrella target to build all examples
-add_custom_target(examples-all DEPENDS ${ZERO_OVERHEAD_TARGETS} ${RUNTIME_OVERHEAD_TARGETS})
+add_custom_target(examples-all DEPENDS ${ZERO_OVERHEAD_TARGETS} ${RUNTIME_OVERHEAD_TARGETS} container-examples)
 
 # Assembly comparison targets
 add_custom_target(asm-compare

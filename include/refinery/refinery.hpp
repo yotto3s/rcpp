@@ -43,6 +43,7 @@
 #include "interval.hpp"
 #include "operations.hpp"
 #include "predicates.hpp"
+#include "refined_container.hpp"
 #include "refined_type.hpp"
 
 namespace refinery {
